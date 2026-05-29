@@ -1,7 +1,7 @@
 {
-  "name": "Stem Player",
-  "short_name": "StemPlayer",
-  "description": "Musical theatre rehearsal stem player",
+  "name": "You're a Good Man Charley Brown",
+  "short_name": "GMCB Player",
+  "description": "You're a Good Man Charley Brown rehearsal stem player",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#1c1c1e",
