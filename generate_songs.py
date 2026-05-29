@@ -17,7 +17,7 @@ import os
 import re
 import json
 
-SHOW_TITLE  = "Unexpected Stories"
+SHOW_TITLE  = "You're a Good Man Charley Brown"
 OUTPUT_FILE = "songs.json"
 AUDIO_DIR   = "audio"   # subfolder where MP3s live (matches GitHub repo structure)
 
@@ -164,6 +164,24 @@ def build_songs(directory="."):
 
     return songs
 
+def update_inline_songs(directory, output):
+    """Patch window.SONGS_DATA in index.html so it works from file://."""
+    html_path = os.path.join(directory, "index.html")
+    if not os.path.isfile(html_path):
+        return
+    inline = json.dumps(output, separators=(',', ':'))
+    with open(html_path, 'r', encoding='utf-8') as fh:
+        content = fh.read()
+    new_content = re.sub(
+        r'(window\.SONGS_DATA\s*=\s*)(.+?)(;)',
+        lambda m: m.group(1) + inline + m.group(3),
+        content
+    )
+    if new_content != content:
+        with open(html_path, 'w', encoding='utf-8') as fh:
+            fh.write(new_content)
+        print(f"Updated inline SONGS_DATA in index.html")
+
 def main():
     directory = os.path.dirname(os.path.abspath(__file__))
     audio_dir = os.path.join(directory, AUDIO_DIR)
@@ -176,6 +194,7 @@ def main():
     out_path = os.path.join(directory, OUTPUT_FILE)
     with open(out_path, 'w', encoding='utf-8') as fh:
         json.dump(output, fh, indent=2)
+    update_inline_songs(directory, output)
     cue_count = sum(1 for s in songs if s.get('type') == 'cue')
     song_count = len(songs) - cue_count
     print(f"Written {len(songs)} entries to {out_path}  ({song_count} songs, {cue_count} cues)")
