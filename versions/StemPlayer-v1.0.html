@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stem Player</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif;
+            background: #1c1c1e;
+            color: #d0d0d0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ── Header ── */
+        header {
+            background: #111;
+            padding: 0 20px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #2c2c2e;
+            flex-shrink: 0;
+        }
+        header h1 {
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: #888;
+        }
+
+        /* ── Layout ── */
+        .app {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            width: 220px;
+            background: #161618;
+            border-right: 1px solid #2c2c2e;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .sidebar-top {
+            padding: 14px 12px;
+            border-bottom: 1px solid #2c2c2e;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .load-btn {
+            padding: 9px 12px;
+            background: #2c5f9e;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            width: 100%;
+            text-align: center;
+            transition: background 0.15s;
+        }
+        .load-btn:hover { background: #3a72b8; }
+        .load-btn:active { background: #244e88; }
+
+        .load-hint {
+            font-size: 11px;
+            color: #555;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        .song-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 6px 0;
+        }
+        .song-list::-webkit-scrollbar { width: 4px; }
+        .song-list::-webkit-scrollbar-track { background: transparent; }
+        .song-list::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+        .song-item {
+            padding: 11px 14px;
+            cursor: pointer;
+            font-size: 13px;
+            border-left: 3px solid transparent;
+            color: #aaa;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: background 0.1s, color 0.1s;
+            user-select: none;
+        }
+        .song-item:hover { background: #222; color: #ddd; }
+        .song-item.active {
+            background: #1a3a5c;
+            border-left-color: #2c5f9e;
+            color: #fff;
+        }
+
+        .empty-list {
+            padding: 20px 14px;
+            color: #444;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        /* ── Player Area ── */
+        .player {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 60px;
+            gap: 36px;
+        }
+
+        .idle-message {
+            color: #444;
+            font-size: 15px;
+            text-align: center;
+            line-height: 1.8;
+        }
+
+        /* Song title */
+        .song-title {
+            font-size: 26px;
+            font-weight: 300;
+            color: #fff;
+            text-align: center;
+            letter-spacing: 0.3px;
+            max-width: 600px;
+        }
+
+        /* Scrub bar */
+        .scrub-section {
+            width: 100%;
+            max-width: 580px;
+        }
+        .time-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #555;
+            margin-bottom: 9px;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0.5px;
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 5px;
+            border-radius: 3px;
+            background: #333;
+            outline: none;
+            cursor: pointer;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:active { transform: scale(1.2); }
+
+        #scrubBar::-webkit-slider-thumb { background: #5a9ae0; }
+
+        /* Scrub bar fill illusion via gradient */
+        #scrubBar {
+            background: linear-gradient(to right, #2c5f9e 0%, #333 0%);
+        }
+
+        /* Transport */
+        .transport {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .btn-stop {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #2c2c2e;
+            border: 1px solid #3a3a3c;
+            color: #aaa;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s;
+        }
+        .btn-stop:hover { background: #3a3a3c; color: #fff; }
+
+        .btn-play {
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            background: #2c5f9e;
+            border: none;
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s;
+            box-shadow: 0 4px 16px rgba(44, 95, 158, 0.4);
+        }
+        .btn-play:hover { background: #3a72b8; }
+        .btn-play:active { background: #244e88; }
+
+        /* Vocal volume */
+        .vocal-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+            width: 100%;
+            max-width: 420px;
+        }
+
+        .section-label {
+            font-size: 10px;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: #555;
+        }
+
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            width: 100%;
+        }
+        .slider-end-label {
+            font-size: 10px;
+            color: #444;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            flex-shrink: 0;
+            width: 30px;
+        }
+        .slider-end-label.right { text-align: right; }
+
+        #vocalSlider::-webkit-slider-thumb { background: #e0932a; }
+        #vocalSlider {
+            background: linear-gradient(to right, #e0932a 15%, #333 15%);
+        }
+
+        .vocal-value {
+            font-size: 12px;
+            color: #888;
+            width: 36px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            flex-shrink: 0;
+        }
+
+        /* Preset buttons */
+        .preset-row {
+            display: flex;
+            gap: 8px;
+        }
+        .preset-btn {
+            padding: 5px 12px;
+            border-radius: 14px;
+            border: 1px solid #333;
+            background: transparent;
+            color: #666;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .preset-btn:hover { border-color: #555; color: #aaa; }
+        .preset-btn.active-preset { border-color: #e0932a; color: #e0932a; }
+
+        /* Hidden */
+        #fileInput { display: none; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Stem Player</h1>
+</header>
+
+<div class="app">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-top">
+            <input type="file" id="fileInput" multiple accept=".mp3,.wav,.m4a,.aiff,.ogg,.flac">
+            <button class="load-btn" onclick="openFilePicker()">+ Load Songs</button>
+            <div class="load-hint">Select your stems folder or individual files</div>
+        </div>
+        <div class="song-list" id="songList">
+            <div class="empty-list">Load your stems to get started.<br><br>Files should be named:<br><em>Song Name - Vocals.mp3<br>Song Name - Instrumental.mp3</em></div>
+        </div>
+    </div>
+
+    <!-- Player -->
+    <div class="player" id="player">
+        <div class="idle-message">Select a song from the list<br>to begin.</div>
+    </div>
+
+</div>
+
+<script>
+// ── Song library ───────────────────────────────────────────────────────────────
+let library = {};        // { "Song Name": { vocal: File, instrumental: File } }
+let currentSong = null;
+let isPlaying = false;
+let isScrubbing = false;
+let animFrame = null;
+let vocalLevel = 15;     // 0–100, default to low-guide mode
+
+// ── Audio elements (created once, reused) ─────────────────────────────────────
+const instrAudio = new Audio();
+const vocalAudio = new Audio();
+instrAudio.preload = 'auto';
+vocalAudio.preload = 'auto';
+
+// Drift correction: keep vocal in sync with instrumental
+setInterval(() => {
+    if (isPlaying && instrAudio.duration) {
+        const drift = Math.abs(instrAudio.currentTime - vocalAudio.currentTime);
+        if (drift > 0.15) {
+            vocalAudio.currentTime = instrAudio.currentTime;
+        }
+    }
+}, 4000);
+
+// ── Web Audio API for gain (init on first user gesture) ───────────────────────
+let audioCtx, instrSource, vocalSource, gainNode;
+let audioGraphReady = false;
+
+function initAudioGraph() {
+    if (audioGraphReady) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    instrSource = audioCtx.createMediaElementSource(instrAudio);
+    vocalSource = audioCtx.createMediaElementSource(vocalAudio);
+    gainNode    = audioCtx.createGain();
+    gainNode.gain.value = vocalLevel / 100;
+    instrSource.connect(audioCtx.destination);
+    vocalSource.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    audioGraphReady = true;
+}
+
+// ── File loading ──────────────────────────────────────────────────────────────
+function openFilePicker() {
+    // Try folder selection first, fall back to multi-file
+    const input = document.getElementById('fileInput');
+    input.removeAttribute('webkitdirectory');
+    // We'll try webkitdirectory; if it doesn't work user still gets multi-file
+    try { input.setAttribute('webkitdirectory', ''); } catch(e) {}
+    input.click();
+}
+
+document.getElementById('fileInput').addEventListener('change', function(e) {
+    const files = Array.from(e.target.files);
+    let added = 0;
+
+    files.forEach(file => {
+        const name = file.name;
+        // Matches: "Song Title - Vocals.mp3" or "Song Title - Instrumental.mp3"
+        // Case-insensitive, handles Vocal/Vocals, Instrumental/Instrumentals
+        const vocalMatch  = name.match(/^(.+?)\s*-\s*Vocals?\.(mp3|wav|m4a|aiff|ogg|flac)$/i);
+        const instrMatch  = name.match(/^(.+?)\s*-\s*Instrumentals?\.(mp3|wav|m4a|aiff|ogg|flac)$/i);
+
+        if (vocalMatch) {
+            const title = vocalMatch[1].trim();
+            if (!library[title]) library[title] = {};
+            library[title].vocal = file;
+            added++;
+        } else if (instrMatch) {
+            const title = instrMatch[1].trim();
+            if (!library[title]) library[title] = {};
+            library[title].instrumental = file;
+            added++;
+        }
+    });
+
+    renderSongList();
+    this.value = ''; // allow re-loading same folder
+});
+
+// ── Song list rendering ───────────────────────────────────────────────────────
+function renderSongList() {
+    const list = document.getElementById('songList');
+
+    // Only show complete pairs
+    const completePairs = Object.keys(library)
+        .filter(name => library[name].vocal && library[name].instrumental)
+        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+
+    if (completePairs.length === 0) {
+        list.innerHTML = '<div class="empty-list">No matching pairs found.<br><br>Make sure files are named:<br><em>Song - Vocals.mp3<br>Song - Instrumental.mp3</em></div>';
+        return;
+    }
+
+    list.innerHTML = '';
+    completePairs.forEach(name => {
+        const div = document.createElement('div');
+        div.className = 'song-item' + (name === currentSong ? ' active' : '');
+        div.textContent = name;
+        div.title = name;
+        div.addEventListener('click', () => selectSong(name));
+        list.appendChild(div);
+    });
+}
+
+// ── Select & load a song ──────────────────────────────────────────────────────
+function selectSong(name) {
+    if (name === currentSong) return;
+
+    stopPlayback(true);
+    currentSong = name;
+
+    // Revoke old object URLs to free memory
+    if (instrAudio._objectURL) URL.revokeObjectURL(instrAudio._objectURL);
+    if (vocalAudio._objectURL) URL.revokeObjectURL(vocalAudio._objectURL);
+
+    instrAudio._objectURL = URL.createObjectURL(library[name].instrumental);
+    vocalAudio._objectURL = URL.createObjectURL(library[name].vocal);
+    instrAudio.src = instrAudio._objectURL;
+    vocalAudio.src = vocalAudio._objectURL;
+
+    instrAudio.load();
+    vocalAudio.load();
+
+    // Update sidebar highlight
+    document.querySelectorAll('.song-item').forEach(el => {
+        el.classList.toggle('active', el.textContent === name);
+    });
+
+    renderPlayer();
+}
+
+// ── Render the player panel ───────────────────────────────────────────────────
+function renderPlayer() {
+    const player = document.getElementById('player');
+    player.innerHTML = `
+        <div class="song-title" id="songTitle">${currentSong}</div>
+
+        <div class="scrub-section">
+            <div class="time-row">
+                <span id="timeCurrent">0:00</span>
+                <span id="timeTotal">—:——</span>
+            </div>
+            <input type="range" id="scrubBar" min="0" max="1000" step="1" value="0">
+        </div>
+
+        <div class="transport">
+            <button class="btn-stop" id="stopBtn" title="Stop & rewind">&#9632;</button>
+            <button class="btn-play" id="playBtn">&#9654;</button>
+        </div>
+
+        <div class="vocal-section">
+            <div class="section-label">Vocal Guide Volume</div>
+            <div class="slider-row">
+                <span class="slider-end-label">Off</span>
+                <input type="range" id="vocalSlider" min="0" max="100" step="1" value="${vocalLevel}">
+                <span class="slider-end-label right">Full</span>
+                <span class="vocal-value" id="vocalValue">${vocalLevel}%</span>
+            </div>
+            <div class="preset-row">
+                <button class="preset-btn" onclick="setVocalPreset(0)">Off</button>
+                <button class="preset-btn" onclick="setVocalPreset(15)">Low</button>
+                <button class="preset-btn" onclick="setVocalPreset(50)">Mid</button>
+                <button class="preset-btn" onclick="setVocalPreset(100)">Full</button>
+            </div>
+        </div>
+    `;
+
+    // Wire up events
+    document.getElementById('playBtn').addEventListener('click', togglePlay);
+    document.getElementById('stopBtn').addEventListener('click', () => stopPlayback(true));
+
+    const scrub = document.getElementById('scrubBar');
+    scrub.addEventListener('mousedown', ()  => { isScrubbing = true; });
+    scrub.addEventListener('touchstart', () => { isScrubbing = true; });
+    scrub.addEventListener('input', onScrubInput);
+    scrub.addEventListener('mouseup', onScrubRelease);
+    scrub.addEventListener('touchend', onScrubRelease);
+
+    document.getElementById('vocalSlider').addEventListener('input', onVocalSlider);
+
+    // When metadata loads, show duration
+    instrAudio.addEventListener('loadedmetadata', updateDuration);
+    instrAudio.addEventListener('ended', onTrackEnded);
+
+    updateScrubFill();
+    updateVocalFill();
+    updatePresetButtons();
+}
+
+// ── Transport ─────────────────────────────────────────────────────────────────
+function togglePlay() {
+    isPlaying ? pausePlayback() : startPlayback();
+}
+
+function startPlayback() {
+    initAudioGraph();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    // Start both tracks as close together as possible
+    const offset = instrAudio.currentTime;
+    instrAudio.play();
+    vocalAudio.currentTime = offset;
+    vocalAudio.play();
+
+    isPlaying = true;
+    const btn = document.getElementById('playBtn');
+    if (btn) btn.innerHTML = '&#10074;&#10074;';
+    tickProgress();
+}
+
+function pausePlayback() {
+    instrAudio.pause();
+    vocalAudio.pause();
+    isPlaying = false;
+    const btn = document.getElementById('playBtn');
+    if (btn) btn.innerHTML = '&#9654;';
+    cancelAnimationFrame(animFrame);
+}
+
+function stopPlayback(rewind = false) {
+    instrAudio.pause();
+    vocalAudio.pause();
+    isPlaying = false;
+    if (rewind) {
+        instrAudio.currentTime = 0;
+        vocalAudio.currentTime = 0;
+    }
+    const btn = document.getElementById('playBtn');
+    if (btn) btn.innerHTML = '&#9654;';
+    cancelAnimationFrame(animFrame);
+    if (rewind) updateProgressDisplay(0);
+}
+
+function onTrackEnded() {
+    stopPlayback(true);
+}
+
+// ── Scrubbing ─────────────────────────────────────────────────────────────────
+function onScrubInput(e) {
+    // Live display while dragging
+    const frac = parseFloat(e.target.value) / 1000;
+    const dur = instrAudio.duration || 0;
+    const cur = document.getElementById('timeCurrent');
+    if (cur) cur.textContent = formatTime(frac * dur);
+    updateScrubFill();
+}
+
+function onScrubRelease(e) {
+    const frac = parseFloat(e.target.value) / 1000;
+    seekToFraction(frac);
+    isScrubbing = false;
+}
+
+function seekToFraction(frac) {
+    if (!instrAudio.duration) return;
+    const t = frac * instrAudio.duration;
+    instrAudio.currentTime = t;
+    vocalAudio.currentTime = t;
+    if (isPlaying) {
+        // Brief resync nudge
+        vocalAudio.currentTime = instrAudio.currentTime;
+    }
+    updateProgressDisplay(frac);
+}
+
+// ── Progress animation ────────────────────────────────────────────────────────
+function tickProgress() {
+    if (!isPlaying) return;
+    if (!isScrubbing && instrAudio.duration) {
+        const frac = instrAudio.currentTime / instrAudio.duration;
+        updateProgressDisplay(frac);
+    }
+    animFrame = requestAnimationFrame(tickProgress);
+}
+
+function updateProgressDisplay(frac) {
+    const scrub = document.getElementById('scrubBar');
+    const cur   = document.getElementById('timeCurrent');
+    if (!scrub || !cur) return;
+
+    scrub.value = frac * 1000;
+    cur.textContent = formatTime(frac * (instrAudio.duration || 0));
+    updateScrubFill();
+}
+
+function updateDuration() {
+    const el = document.getElementById('timeTotal');
+    if (el) el.textContent = formatTime(instrAudio.duration || 0);
+}
+
+// ── Vocal volume ──────────────────────────────────────────────────────────────
+function onVocalSlider(e) {
+    vocalLevel = parseFloat(e.target.value);
+    const el = document.getElementById('vocalValue');
+    if (el) el.textContent = vocalLevel + '%';
+
+    initAudioGraph();
+    if (gainNode) gainNode.gain.value = vocalLevel / 100;
+
+    updateVocalFill();
+    updatePresetButtons();
+}
+
+function setVocalPreset(level) {
+    vocalLevel = level;
+    const slider = document.getElementById('vocalSlider');
+    const val    = document.getElementById('vocalValue');
+    if (slider) slider.value = level;
+    if (val)    val.textContent = level + '%';
+
+    initAudioGraph();
+    if (gainNode) gainNode.gain.value = level / 100;
+
+    updateVocalFill();
+    updatePresetButtons();
+}
+
+function updatePresetButtons() {
+    const presets = { 'Off': 0, 'Low': 15, 'Mid': 50, 'Full': 100 };
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+        const target = presets[btn.textContent];
+        btn.classList.toggle('active-preset', target === vocalLevel);
+    });
+}
+
+// ── Visual fill on range inputs ───────────────────────────────────────────────
+function updateScrubFill() {
+    const el = document.getElementById('scrubBar');
+    if (!el) return;
+    const pct = (parseFloat(el.value) / 1000 * 100).toFixed(1);
+    el.style.background = `linear-gradient(to right, #2c5f9e ${pct}%, #333 ${pct}%)`;
+}
+
+function updateVocalFill() {
+    const el = document.getElementById('vocalSlider');
+    if (!el) return;
+    const pct = vocalLevel;
+    el.style.background = `linear-gradient(to right, #e0932a ${pct}%, #333 ${pct}%)`;
+}
+
+// ── Utility ───────────────────────────────────────────────────────────────────
+function formatTime(s) {
+    if (!s || isNaN(s)) return '0:00';
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+}
+
+// ── Keyboard shortcuts ────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+    if (!currentSong) return;
+    if (e.target.tagName === 'INPUT') return;
+
+    switch(e.key) {
+        case ' ':
+            e.preventDefault();
+            togglePlay();
+            break;
+        case 'ArrowLeft':
+            e.preventDefault();
+            seekToFraction(Math.max(0, (instrAudio.currentTime - 5) / (instrAudio.duration || 1)));
+            break;
+        case 'ArrowRight':
+            e.preventDefault();
+            seekToFraction(Math.min(1, (instrAudio.currentTime + 5) / (instrAudio.duration || 1)));
+            break;
+        case 'Escape':
+            stopPlayback(true);
+            break;
+    }
+});
+</script>
+</body>
+</html>

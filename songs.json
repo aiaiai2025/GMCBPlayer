@@ -1,0 +1,35 @@
+{
+  "showTitle": "Unexpected Stories",
+  "songs": [
+    {
+      "title": "01-Youre a Good Man Charley Brown",
+      "instr": "audio/01-Youre a Good Man Charley Brown (instrumental).mp3",
+      "vocal": "audio/01-Youre a Good Man Charley Brown (vocals).mp3"
+    },
+    {
+      "title": "02-my-new-philosophy",
+      "instr": "audio/02-my-new-philosophy (instrumental).mp3",
+      "vocal": "audio/02-my-new-philosophy (vocals).mp3"
+    },
+    {
+      "title": "03-suppertime",
+      "instr": "audio/03-suppertime(instrumental).mp3",
+      "vocal": "audio/03-suppertime (vocals).mp3"
+    },
+    {
+      "title": "04-beethoven-day",
+      "instr": "audio/04-beethoven-day-(instrumental).mp3",
+      "vocal": "audio/04-beethoven day (vocals).mp3"
+    },
+    {
+      "title": "05-team-baseball",
+      "instr": "audio/05-team-baseball (instrumental).mp3",
+      "vocal": "audio/05-team-baseball (vocals).mp3"
+    },
+    {
+      "title": "06-happiness",
+      "instr": "audio/06-happiness (instrumental).mp3",
+      "vocal": "audio/06-happiness (vocals).mp3"
+    }
+  ]
+}

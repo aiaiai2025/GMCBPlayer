@@ -1,0 +1,1545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Easy Player</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif;
+      background: #f2f2f7;
+      color: #1c1c1e;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      background: #fff;
+      border-bottom: 1px solid #d1d1d6;
+      padding: 0 20px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    header h1 { font-size: 15px; font-weight: 600; }
+
+    .mode-toggle {
+      display: flex;
+      background: #e5e5ea;
+      border-radius: 8px;
+      padding: 3px;
+      gap: 2px;
+    }
+    .mode-btn {
+      padding: 4px 14px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      background: transparent;
+      color: #6e6e73;
+      transition: all 0.15s;
+    }
+    .mode-btn.active {
+      background: #fff;
+      color: #1c1c1e;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    }
+
+    /* ── Layout ── */
+    .app { display: flex; flex: 1; overflow: hidden; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 250px;
+      background: #fff;
+      border-right: 1px solid #d1d1d6;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    .sidebar-top { padding: 12px; border-bottom: 1px solid #e5e5ea; }
+    .load-btn {
+      width: 100%;
+      padding: 9px 12px;
+      background: #007aff;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .load-btn:hover { background: #0066d6; }
+
+    .playlist-bar {
+      padding: 10px 12px 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .playlist-select {
+      flex: 1;
+      font-size: 13px;
+      border: 1px solid #d1d1d6;
+      border-radius: 7px;
+      padding: 5px 8px;
+      background: #f2f2f7;
+      color: #1c1c1e;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23999'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+      padding-right: 24px;
+    }
+    .btn-sm {
+      width: 28px; height: 28px;
+      border: 1px solid #d1d1d6;
+      border-radius: 7px;
+      background: #f2f2f7;
+      color: #555;
+      font-size: 15px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.1s;
+    }
+    .btn-sm:hover { background: #e5e5ea; color: #1c1c1e; }
+    .btn-sm.danger:hover { background: #ffeef0; color: #d70015; border-color: #d70015; }
+
+    .playlist-meta { padding: 5px 12px 8px; font-size: 11px; color: #aeaeb2; }
+
+    .song-list { flex: 1; overflow-y: auto; }
+    .song-list::-webkit-scrollbar { width: 4px; }
+    .song-list::-webkit-scrollbar-thumb { background: #d1d1d6; border-radius: 2px; }
+
+    .song-item {
+      padding: 10px 14px;
+      cursor: pointer;
+      font-size: 13px;
+      border-left: 3px solid transparent;
+      color: #3a3a3c;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      transition: background 0.1s;
+      user-select: none;
+    }
+    .song-item:hover { background: #f2f2f7; }
+    .song-item.active {
+      background: #e8f0fe;
+      border-left-color: #007aff;
+      color: #007aff;
+      font-weight: 500;
+    }
+    .song-item-name {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
+    .cut-badge {
+      font-size: 11px;
+      color: #ff9500;
+      flex-shrink: 0;
+      margin-left: 5px;
+      opacity: 0.9;
+    }
+
+    .empty-hint { padding: 20px 14px; color: #aeaeb2; font-size: 12px; line-height: 1.7; }
+
+    .playlist-editor {
+      border-top: 1px solid #e5e5ea;
+      padding: 10px 12px;
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 200px;
+    }
+    .playlist-editor.open { display: flex; }
+    .playlist-editor-label { font-size: 11px; color: #aeaeb2; text-transform: uppercase; letter-spacing: 0.5px; }
+    .checkbox-list { overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+    .checkbox-list::-webkit-scrollbar { width: 4px; }
+    .checkbox-list::-webkit-scrollbar-thumb { background: #d1d1d6; border-radius: 2px; }
+    .checkbox-item {
+      display: flex; align-items: center; gap: 7px;
+      padding: 3px 2px;
+      font-size: 12px; color: #3a3a3c;
+      cursor: pointer; border-radius: 4px;
+    }
+    .checkbox-item:hover { background: #f2f2f7; }
+    .checkbox-item input { cursor: pointer; accent-color: #007aff; }
+
+    .add-playlist-row { padding: 8px 12px 10px; border-top: 1px solid #e5e5ea; }
+    .new-playlist-btn {
+      width: 100%; padding: 7px;
+      background: transparent;
+      border: 1px dashed #c7c7cc;
+      border-radius: 7px;
+      font-size: 12px; color: #aeaeb2;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .new-playlist-btn:hover { border-color: #007aff; color: #007aff; background: #f0f5ff; }
+
+    /* ── Player ── */
+    .player {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 60px;
+      gap: 24px;
+      overflow-y: auto;
+    }
+
+    .idle-msg { color: #aeaeb2; font-size: 15px; text-align: center; line-height: 2; }
+
+    .now-playing {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      width: 100%;
+      max-width: 600px;
+    }
+    .now-playing.visible { display: flex; }
+
+    .song-title {
+      font-size: 22px;
+      font-weight: 300;
+      color: #1c1c1e;
+      text-align: center;
+      line-height: 1.3;
+    }
+
+    /* Scrub bar */
+    .scrub-section { width: 100%; }
+    .scrub-wrap { position: relative; }
+    .scrub-marker {
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 11px; height: 11px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+      pointer-events: all;
+      cursor: grab;
+      display: none;
+    }
+    .scrub-marker.grabbing { cursor: grabbing; transform: translate(-50%, -50%) scale(1.15); }
+    #scrubMarkerStart { background: #34c759; }
+    #scrubMarkerEnd   { background: #ff9500; }
+
+    .time-row {
+      display: flex; justify-content: space-between;
+      font-size: 11px; color: #aeaeb2;
+      margin-bottom: 8px;
+      font-variant-numeric: tabular-nums;
+    }
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%; height: 4px;
+      border-radius: 2px;
+      background: #d1d1d6;
+      outline: none; cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: #007aff;
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgba(0,122,255,0.3);
+    }
+    /* Scrub bar thumb is hidden — green/orange dots are the handles */
+    #scrubBar { pointer-events: none; }
+    #scrubBar::-webkit-slider-thumb {
+      width: 0; height: 0; opacity: 0;
+    }
+    .scrub-wrap { cursor: crosshair; }
+    #scrubBar { background: linear-gradient(to right, #007aff 0%, #d1d1d6 0%); }
+
+    /* Transport */
+    .transport { display: flex; align-items: center; gap: 20px; }
+    .btn-circle {
+      width: 42px; height: 42px;
+      border-radius: 50%;
+      background: #e5e5ea; border: none;
+      color: #3a3a3c; font-size: 15px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .btn-circle:hover { background: #d1d1d6; }
+    .btn-play {
+      width: 62px; height: 62px;
+      border-radius: 50%;
+      background: #007aff; border: none;
+      color: #fff; font-size: 22px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+      box-shadow: 0 4px 16px rgba(0,122,255,0.3);
+    }
+    .btn-play:hover { background: #0066d6; }
+    .btn-play:active { background: #0055b3; }
+
+    /* ── Trim section ── */
+    .trim-section {
+      width: 100%;
+      background: #fff;
+      border: 1px solid #e5e5ea;
+      border-radius: 12px;
+      padding: 16px 20px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .trim-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .trim-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #aeaeb2;
+    }
+    .trim-clear-btn {
+      font-size: 12px;
+      border: none;
+      background: transparent;
+      color: #aeaeb2;
+      cursor: pointer;
+      padding: 2px 4px;
+      border-radius: 4px;
+      display: none;
+    }
+    .trim-clear-btn:hover { color: #d70015; background: #ffeef0; }
+    .trim-clear-btn.visible { display: block; }
+
+    /* The dual-handle bar */
+    .trim-bar-wrap {
+      position: relative;
+      padding: 10px 0;  /* vertical room for handles to overflow */
+      cursor: default;
+    }
+    .trim-track {
+      height: 5px;
+      background: #e5e5ea;
+      border-radius: 3px;
+      position: relative;
+    }
+    .trim-fill {
+      position: absolute;
+      top: 0; height: 100%;
+      background: rgba(0, 122, 255, 0.2);
+      border-radius: 3px;
+      left: 0%; width: 100%;
+      pointer-events: none;
+    }
+    .trim-handle {
+      position: absolute;
+      top: 50%;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      border: 2.5px solid;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.18);
+      transform: translate(-50%, -50%);
+      cursor: grab;
+      touch-action: none;
+      transition: box-shadow 0.1s, transform 0.1s;
+      z-index: 2;
+    }
+    .trim-handle:hover {
+      box-shadow: 0 2px 8px rgba(0,0,0,0.22);
+      transform: translate(-50%, -50%) scale(1.12);
+    }
+    .trim-handle.grabbing {
+      cursor: grabbing;
+      transform: translate(-50%, -50%) scale(1.15);
+    }
+    #handleStart { border-color: #34c759; left: 0%;    z-index: 2; }
+    #handleEnd   { border-color: #ff9500; left: 100%; z-index: 3; }
+
+    /* Labels row below the bar */
+    .trim-labels {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .trim-side {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      align-items: flex-start;
+    }
+    .trim-side-right { align-items: flex-end; }
+
+    .trim-time-label {
+      font-size: 12px;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+      color: #3a3a3c;
+      min-width: 52px;
+    }
+    .trim-side-right .trim-time-label { text-align: right; }
+
+    .trim-btns {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+    .btn-mark {
+      padding: 4px 9px;
+      font-size: 11px;
+      border: 1px solid #d1d1d6;
+      border-radius: 6px;
+      background: #f2f2f7;
+      color: #3a3a3c;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn-mark:hover { background: #007aff; color: #fff; border-color: #007aff; }
+
+    .btn-nudge {
+      width: 24px; height: 24px;
+      border: 1px solid #d1d1d6;
+      border-radius: 5px;
+      background: #f2f2f7;
+      color: #555;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.1s;
+    }
+    .btn-nudge:hover { background: #e5e5ea; color: #1c1c1e; }
+
+    .trim-summary {
+      font-size: 11px;
+      color: #aeaeb2;
+      text-align: center;
+      min-height: 16px;
+    }
+
+    .kbd-hint { font-size: 11px; color: #c7c7cc; }
+
+    /* ── Section 2 ── */
+    .section2-panel { display: none; flex-direction: column; gap: 10px; }
+    .section2-panel.open { display: flex; }
+    .section2-divider {
+      display: flex; align-items: center; gap: 8px;
+      padding-top: 10px; border-top: 1px dashed #d1d1d6; margin-top: 2px;
+    }
+    .section2-divider-title {
+      font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 1px; color: #aeaeb2;
+    }
+    .section2-remove-btn {
+      margin-left: auto; font-size: 12px; border: none; background: transparent;
+      color: #aeaeb2; cursor: pointer; padding: 2px 4px; border-radius: 4px;
+    }
+    .section2-remove-btn:hover { color: #d70015; background: #ffeef0; }
+    #handleStart2 { border-color: #34c759; left: 0%; z-index: 2; }
+    #handleEnd2   { border-color: #ff9500; left: 100%; z-index: 3; }
+    .btn-add-section {
+      font-size: 12px; border: 1px dashed #c7c7cc; border-radius: 7px;
+      background: transparent; color: #aeaeb2; cursor: pointer;
+      padding: 6px 12px; transition: all 0.15s; width: 100%;
+    }
+    .btn-add-section:hover { border-color: #007aff; color: #007aff; background: #f0f5ff; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Easy Player</h1>
+  <div class="mode-toggle">
+    <button class="mode-btn active" id="btnContinuous" onclick="setMode('continuous')">Continuous</button>
+    <button class="mode-btn"        id="btnSingle"     onclick="setMode('single')">Single</button>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- ── Sidebar ── -->
+  <div class="sidebar">
+    <div class="sidebar-top">
+      <button class="load-btn" onclick="loadFolder()">Load Folder…</button>
+      <input type="file" id="folderInput" webkitdirectory
+             accept="audio/*,.mp3,.wav,.m4a,.aif,.aiff,.ogg,.flac,.aac"
+             style="display:none">
+    </div>
+
+    <div class="playlist-bar">
+      <select class="playlist-select" id="playlistSelect" onchange="switchPlaylist()"></select>
+      <button class="btn-sm" title="New playlist" onclick="newPlaylist()">+</button>
+      <button class="btn-sm danger" id="btnDelete" title="Delete playlist"
+              onclick="deletePlaylist()" style="display:none">✕</button>
+    </div>
+    <div class="playlist-meta" id="playlistMeta"></div>
+
+    <div class="song-list" id="songList">
+      <div class="empty-hint">Open a folder to load audio files.<br>All tracks will be listed here.</div>
+    </div>
+
+    <div class="playlist-editor" id="playlistEditor">
+      <div class="playlist-editor-label">Add songs</div>
+      <div class="checkbox-list" id="checkboxList"></div>
+    </div>
+
+    <div class="add-playlist-row">
+      <button class="new-playlist-btn" onclick="newPlaylist()">+ New Playlist</button>
+    </div>
+  </div>
+
+  <!-- ── Player ── -->
+  <div class="player">
+    <div class="idle-msg" id="idleMsg">Open a folder to get started.</div>
+
+    <div class="now-playing" id="nowPlaying">
+      <div class="song-title" id="songTitle"></div>
+
+      <div class="scrub-section">
+        <div class="time-row">
+          <span id="timeElapsed">0:00</span>
+          <span id="timeDuration">0:00</span>
+        </div>
+        <div class="scrub-wrap" id="scrubWrap">
+          <input type="range" id="scrubBar" value="0" min="0" max="1000" step="1">
+          <div class="scrub-marker" id="scrubMarkerStart"></div>
+          <div class="scrub-marker" id="scrubMarkerEnd"></div>
+        </div>
+      </div>
+
+      <div class="transport">
+        <button class="btn-circle" onclick="stopPlayback()" title="Stop · Esc">■</button>
+        <button class="btn-play" id="btnPlay" onclick="togglePlay()" title="Play/Pause · Space">▶</button>
+        <button class="btn-circle" onclick="nextTrack()" title="Next · N">⏭</button>
+      </div>
+
+      <!-- ── Trim ── -->
+      <div class="trim-section">
+        <div class="trim-section-header">
+          <span class="trim-section-title">Trim</span>
+          <button class="trim-clear-btn" id="btnClearTrim" onclick="clearTrim()">✕ Remove trim</button>
+        </div>
+
+        <div class="trim-bar-wrap" id="trimBarWrap">
+          <div class="trim-track" id="trimTrack">
+            <div class="trim-fill" id="trimFill"></div>
+            <div class="trim-handle" id="handleStart"></div>
+            <div class="trim-handle" id="handleEnd"></div>
+          </div>
+        </div>
+
+        <div class="trim-labels">
+          <div class="trim-side">
+            <span class="trim-time-label" id="trimStartLabel">Start of track</span>
+            <div class="trim-btns">
+              <button class="btn-mark" id="btnMarkStart" onclick="markHere('start')" title="Sets trim start to current playhead position">Set start → 0:00.0</button>
+              <button class="btn-nudge" onclick="nudge('start', -0.1)" title="Back 0.1s">◂</button>
+              <button class="btn-nudge" onclick="nudge('start',  0.1)" title="Forward 0.1s">▸</button>
+            </div>
+          </div>
+          <div class="trim-side trim-side-right">
+            <span class="trim-time-label" id="trimEndLabel">End of track</span>
+            <div class="trim-btns">
+              <button class="btn-nudge" onclick="nudge('end', -0.1)" title="Back 0.1s">◂</button>
+              <button class="btn-nudge" onclick="nudge('end',  0.1)" title="Forward 0.1s">▸</button>
+              <button class="btn-mark" id="btnMarkEnd" onclick="markHere('end')" title="Sets trim stop to current playhead position">0:00.0 ← Set stop</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2 (hidden until user requests it) -->
+        <div class="section2-panel" id="section2Panel">
+          <div class="section2-divider">
+            <span class="section2-divider-title">Second section</span>
+            <button class="section2-remove-btn" onclick="removeSection2()">✕ Remove</button>
+          </div>
+          <div class="trim-bar-wrap" id="trimBarWrap2">
+            <div class="trim-track" id="trimTrack2">
+              <div class="trim-fill" id="trimFill2"></div>
+              <div class="trim-handle" id="handleStart2"></div>
+              <div class="trim-handle" id="handleEnd2"></div>
+            </div>
+          </div>
+          <div class="trim-labels">
+            <div class="trim-side">
+              <span class="trim-time-label" id="trimStart2Label">—</span>
+              <div class="trim-btns">
+                <button class="btn-mark" id="btnMarkStart2" onclick="markHere('start2')">Set start → —</button>
+                <button class="btn-nudge" onclick="nudge('start2', -0.1)" title="Back 0.1s">◂</button>
+                <button class="btn-nudge" onclick="nudge('start2',  0.1)" title="Forward 0.1s">▸</button>
+              </div>
+            </div>
+            <div class="trim-side trim-side-right">
+              <span class="trim-time-label" id="trimEnd2Label">—</span>
+              <div class="trim-btns">
+                <button class="btn-nudge" onclick="nudge('end2', -0.1)" title="Back 0.1s">◂</button>
+                <button class="btn-nudge" onclick="nudge('end2',  0.1)" title="Forward 0.1s">▸</button>
+                <button class="btn-mark" id="btnMarkEnd2" onclick="markHere('end2')">— ← Set stop</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button class="btn-add-section" id="btnAddSection2" onclick="addSection2()">＋ Add second section</button>
+
+        <div class="trim-summary" id="trimSummary"></div>
+      </div>
+
+      <div class="kbd-hint">Space — play/pause &nbsp;·&nbsp; Esc — stop &nbsp;·&nbsp; N — next</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────
+let allFiles    = [];
+let playlists   = {};
+let activePL    = '';
+let currentIdx  = -1;
+let mode        = 'continuous';
+let isScrubbing = false;
+let topDragging = null;  // 'start' | 'end' — for scrub bar marker dots
+let rafId        = null;
+let sessionEnd   = null;  // in-session stop point for orange dot (null = use trim end)
+let showSection2 = false; // whether the second section panel is visible
+
+const audio = new Audio();
+
+// ── Cuts ───────────────────────────────────────────────────
+// Keyed by filename only (not playlist) so cuts survive session reloads.
+// { 'filename.mp3': { start: null, end: null } }  — values are seconds or null
+const CUTS_KEY = 'easyplayer_cuts';
+let cuts = JSON.parse(localStorage.getItem(CUTS_KEY) || '{}');
+
+function cutKey() {
+  const file = trackList()[currentIdx];
+  return file ? file.name : null;
+}
+
+// ── Virtual timeline (combined sections) ──────────────────
+// Returns combined playable duration when 2 sections are configured, else null.
+function virtualDuration() {
+  const cut = currentCut();
+  const dur = audio.duration || 0;
+  if (!cut.start2 || !cut.end || !dur) return null;
+  const s1Dur = cut.end - (cut.start ?? 0);
+  const s2Dur = (cut.end2 ?? dur) - cut.start2;
+  return Math.max(0, s1Dur) + Math.max(0, s2Dur);
+}
+
+// Maps actual file time → virtual combined time.
+function actualToVirtual(actualT) {
+  const cut = currentCut();
+  if (!cut.start2 || !cut.end) return null;
+  const s1Start = cut.start ?? 0;
+  const s1Dur   = cut.end - s1Start;
+  if (actualT <= cut.end) return Math.max(0, actualT - s1Start);
+  return s1Dur + Math.max(0, actualT - cut.start2);
+}
+
+// Maps virtual combined time → actual file time.
+function virtualToActual(virtualT) {
+  const cut = currentCut();
+  if (!cut.start2 || !cut.end) return virtualT;
+  const s1Start = cut.start ?? 0;
+  const s1Dur   = cut.end - s1Start;
+  if (virtualT <= s1Dur) return s1Start + virtualT;
+  return cut.start2 + (virtualT - s1Dur);
+}
+
+function isVirtualMode() {
+  const cut = currentCut();
+  return cut.start2 !== null && cut.end !== null && !!(audio.duration);
+}
+
+function currentCut() {
+  const k    = cutKey();
+  const base = { start: null, end: null, start2: null, end2: null };
+  return (k && cuts[k]) ? Object.assign({}, base, cuts[k]) : base;
+}
+
+function saveCutPoint(point, seconds) {
+  const k = cutKey();
+  if (!k) return;
+  if (!cuts[k]) cuts[k] = { start: null, end: null };
+  cuts[k][point] = seconds !== null ? Math.round(seconds * 10) / 10 : null;
+  localStorage.setItem(CUTS_KEY, JSON.stringify(cuts));
+
+  // Snap sessionEnd if section-1 end tightened past it
+  if (point === 'end') {
+    const newEnd = cuts[cutKey()]?.end ?? null;
+    if (sessionEnd !== null) {
+      if (newEnd === null) sessionEnd = null;
+      else if (sessionEnd > newEnd) sessionEnd = newEnd;
+    }
+  }
+  // Snap start2 if it ended up before the new end (section 1 end pushed right)
+  if (point === 'end') {
+    const k2   = cutKey();
+    const cur  = cuts[k2];
+    if (cur && cur.start2 !== null && cur.end !== null && cur.start2 <= cur.end) {
+      cur.start2 = Math.round((cur.end + 0.1) * 10) / 10;
+      localStorage.setItem(CUTS_KEY, JSON.stringify(cuts));
+    }
+  }
+
+  // Snap playhead into the trim region
+  if (isFinite(audio.currentTime)) {
+    const cut = currentCut();
+    if (point === 'start' && cut.start !== null && audio.currentTime < cut.start)
+      audio.currentTime = cut.start;
+    if (point === 'end' && cut.end !== null && audio.currentTime > cut.end)
+      audio.currentTime = cut.end;
+  }
+
+  updateTrimUI();
+  updateScrubUI();
+  renderSongList();
+}
+
+function clearTrim() {
+  const k = cutKey();
+  if (!k) return;
+  delete cuts[k];
+  sessionEnd   = null;
+  showSection2 = false;
+  localStorage.setItem(CUTS_KEY, JSON.stringify(cuts));
+  updateTrimUI();
+  renderSongList();
+}
+
+function addSection2() {
+  const dur = audio.duration || 0;
+  if (!dur) return;
+  const cut = currentCut();
+
+  // Section 1 must have a hard end — set one if missing
+  let s1End = cut.end;
+  if (s1End === null) {
+    s1End = Math.round(dur * 0.5 * 10) / 10;
+    saveCutPoint('end', s1End);
+  }
+
+  // Section 2 default: starts 1 s after S1 end (or 10% of remaining), plays to track end
+  const gap    = Math.max(1, Math.round((dur - s1End) * 0.1 * 10) / 10);
+  const s2Start = Math.min(dur - 0.2, Math.round((s1End + gap) * 10) / 10);
+  saveCutPoint('start2', s2Start);
+  // end2 left null → plays to track end
+
+  showSection2 = true;
+  updateTrimUI();
+}
+
+function removeSection2() {
+  const k = cutKey();
+  if (!k) return;
+  if (cuts[k]) {
+    delete cuts[k].start2;
+    delete cuts[k].end2;
+    if (cuts[k].start === null && cuts[k].end === null) delete cuts[k];
+    localStorage.setItem(CUTS_KEY, JSON.stringify(cuts));
+  }
+  showSection2 = false;
+  updateTrimUI();
+  updateScrubUI();
+  renderSongList();
+}
+
+// ── File loading ───────────────────────────────────────────
+function loadFolder() {
+  document.getElementById('folderInput').click();
+}
+
+document.getElementById('folderInput').addEventListener('change', e => {
+  const files = Array.from(e.target.files)
+    .filter(f => f.type.startsWith('audio/') || /\.(mp3|wav|m4a|aif|aiff|ogg|flac|aac)$/i.test(f.name))
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+  processFiles(files);
+});
+
+function processFiles(files) {
+  if (!files.length) return;
+
+  allFiles = files;
+  const existing = Object.keys(playlists).filter(k => k !== 'All Files');
+  playlists = { 'All Files': allFiles.map((_, i) => i) };
+  existing.forEach(n => { playlists[n] = []; });
+
+  activePL   = 'All Files';
+  currentIdx = -1;
+
+  stopRaf();
+  audio.pause();
+  audio.src = '';
+
+  rebuildSelect();
+  renderSongList();
+  refreshMeta();
+  showNowPlaying(false);
+}
+
+// ── Playlist helpers ───────────────────────────────────────
+function trackList() {
+  return (playlists[activePL] || []).map(i => allFiles[i]);
+}
+
+function rebuildSelect() {
+  const sel = document.getElementById('playlistSelect');
+  sel.innerHTML = '';
+  Object.keys(playlists).forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    if (name === activePL) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  document.getElementById('btnDelete').style.display = activePL === 'All Files' ? 'none' : '';
+}
+
+function switchPlaylist() {
+  activePL   = document.getElementById('playlistSelect').value;
+  currentIdx = -1;
+  stopRaf();
+  audio.pause();
+  audio.src = '';
+  renderSongList();
+  refreshMeta();
+  renderEditor();
+  showNowPlaying(false);
+  document.getElementById('btnDelete').style.display = activePL === 'All Files' ? 'none' : '';
+}
+
+function newPlaylist() {
+  const name = prompt('Playlist name:');
+  if (!name || !name.trim()) return;
+  const n = name.trim();
+  if (playlists[n]) { alert(`"${n}" already exists.`); return; }
+  playlists[n] = [];
+  activePL = n;
+  rebuildSelect();
+  renderSongList();
+  refreshMeta();
+  renderEditor();
+}
+
+function deletePlaylist() {
+  if (activePL === 'All Files') return;
+  if (!confirm(`Delete playlist "${activePL}"?`)) return;
+  delete playlists[activePL];
+  activePL = 'All Files';
+  rebuildSelect();
+  renderSongList();
+  refreshMeta();
+  renderEditor();
+}
+
+// ── Song list ──────────────────────────────────────────────
+function renderSongList() {
+  const list   = document.getElementById('songList');
+  const tracks = trackList();
+  list.innerHTML = '';
+
+  if (!tracks.length) {
+    const hint = document.createElement('div');
+    hint.className = 'empty-hint';
+    hint.textContent = activePL === 'All Files'
+      ? 'Open a folder to load audio files.'
+      : 'Use "Add songs" below to populate this playlist.';
+    list.appendChild(hint);
+    return;
+  }
+
+  tracks.forEach((file, i) => {
+    const el = document.createElement('div');
+    el.className = 'song-item' + (i === currentIdx ? ' active' : '');
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'song-item-name';
+    nameSpan.textContent = cleanName(file.name);
+    el.appendChild(nameSpan);
+
+    const cut = cuts[file.name];
+    if (cut && (cut.start !== null || cut.end !== null)) {
+      const badge = document.createElement('span');
+      badge.className = 'cut-badge';
+      badge.textContent = '✂';
+      badge.title = buildCutTitle(cut);
+      el.appendChild(badge);
+    }
+
+    el.onclick = () => selectTrack(i);
+    list.appendChild(el);
+  });
+}
+
+function buildCutTitle(cut) {
+  const s = cut.start !== null ? formatTrimTime(cut.start) : 'start';
+  const e = cut.end   !== null ? formatTrimTime(cut.end)   : 'end';
+  let title = `${s} → ${e}`;
+  if (cut.start2 !== null) {
+    const s2 = formatTrimTime(cut.start2);
+    const e2 = cut.end2 !== null ? formatTrimTime(cut.end2) : 'end';
+    title += `, then ${s2} → ${e2}`;
+  }
+  return title;
+}
+
+function cleanName(filename) {
+  return filename.replace(/\.[^.]+$/, '');
+}
+
+// ── Playlist editor ────────────────────────────────────────
+function renderEditor() {
+  const editor = document.getElementById('playlistEditor');
+  const cbList = document.getElementById('checkboxList');
+
+  if (activePL === 'All Files' || !allFiles.length) {
+    editor.classList.remove('open');
+    return;
+  }
+  editor.classList.add('open');
+  cbList.innerHTML = '';
+
+  allFiles.forEach((file, i) => {
+    const inPL = playlists[activePL].includes(i);
+    const row  = document.createElement('label');
+    row.className = 'checkbox-item';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = inPL;
+    cb.addEventListener('change', () => {
+      const pl  = playlists[activePL];
+      const pos = pl.indexOf(i);
+      if (cb.checked && pos === -1) pl.push(i);
+      else if (!cb.checked && pos !== -1) pl.splice(pos, 1);
+      pl.sort((a, b) => a - b);
+      renderSongList();
+      refreshMeta();
+    });
+    const span = document.createElement('span');
+    span.textContent = cleanName(file.name);
+    row.append(cb, span);
+    cbList.appendChild(row);
+  });
+}
+
+// ── Playlist meta ──────────────────────────────────────────
+function refreshMeta() {
+  const el     = document.getElementById('playlistMeta');
+  const tracks = trackList();
+  if (!tracks.length) { el.textContent = ''; return; }
+  el.textContent = tracks.length + (tracks.length === 1 ? ' track' : ' tracks');
+  let loaded = 0, total = 0;
+  tracks.forEach(file => {
+    const a = new Audio();
+    a.preload = 'metadata';
+    a.src = URL.createObjectURL(file);
+    const done = () => {
+      total += isFinite(a.duration) ? a.duration : 0;
+      if (++loaded === tracks.length)
+        el.textContent = tracks.length + (tracks.length === 1 ? ' track' : ' tracks') + '  ·  ' + formatTime(total);
+    };
+    a.addEventListener('loadedmetadata', done);
+    a.addEventListener('error', done);
+  });
+}
+
+// ── Playback ───────────────────────────────────────────────
+function selectTrack(idx, autoplay = false) {
+  currentIdx   = idx;
+  sessionEnd   = null;
+  showSection2 = !!(cuts[trackList()[idx]?.name]?.start2 != null);
+  const file = trackList()[idx];
+  if (!file) return;
+
+  stopRaf();
+  audio.pause();
+  audio.src = URL.createObjectURL(file);
+  audio.load();
+
+  audio.addEventListener('loadedmetadata', () => {
+    const cut  = currentCut();
+    if (cut.start !== null) audio.currentTime = cut.start;
+    const vDur = virtualDuration();
+    document.getElementById('timeDuration').textContent = formatTime(vDur ?? audio.duration);
+    updateTrimUI();
+    updateScrubUI();
+    if (autoplay) {
+      audio.play().then(() => { startRaf(); }).catch(() => {});
+      document.getElementById('btnPlay').textContent = '⏸';
+    }
+  }, { once: true });
+
+  document.getElementById('songTitle').textContent = cleanName(file.name);
+  document.getElementById('btnPlay').textContent = autoplay ? '⏸' : '▶';
+  showNowPlaying(true);
+  renderSongList();
+  updateTrimUI();
+}
+
+function togglePlay() {
+  if (!audio.src) return;
+  if (audio.paused) {
+    audio.play().then(() => { startRaf(); }).catch(() => {});
+    document.getElementById('btnPlay').textContent = '⏸';
+  } else {
+    audio.pause();
+    stopRaf();
+    document.getElementById('btnPlay').textContent = '▶';
+  }
+}
+
+function stopPlayback() {
+  stopRaf();
+  audio.pause();
+  const cut = currentCut();
+  audio.currentTime = cut.start ?? 0;
+  document.getElementById('btnPlay').textContent = '▶';
+  updateScrubUI();
+}
+
+function nextTrack() {
+  const tracks = trackList();
+  if (!tracks.length) return;
+  const wasPlaying = !audio.paused;
+  const next = currentIdx + 1;
+  if (next < tracks.length) selectTrack(next, wasPlaying);
+  else if (mode === 'continuous') selectTrack(0, wasPlaying);
+}
+
+audio.addEventListener('ended', () => {
+  stopRaf();
+  const tracks = trackList();
+  const next   = currentIdx + 1;
+  if (mode === 'continuous') {
+    selectTrack(next < tracks.length ? next : 0, true);
+  } else {
+    document.getElementById('btnPlay').textContent = '▶';
+  }
+});
+
+// ── RAF loop — enforces trim end point ────────────────────
+function startRaf() {
+  stopRaf();
+  rafId = requestAnimationFrame(rafTick);
+}
+
+function stopRaf() {
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+}
+
+function rafTick() {
+  if (audio.paused) { stopRaf(); return; }
+  if (!isScrubbing) updateScrubUI();
+
+  const cut   = currentCut();
+  const hasS2 = cut.start2 !== null;
+  const inS2  = hasS2 && audio.currentTime >= cut.start2;
+
+  // Effective end of the current segment
+  const effEnd = inS2 ? (cut.end2 ?? null) : (sessionEnd ?? cut.end);
+
+  if (effEnd !== null && audio.currentTime >= effEnd) {
+    if (!inS2 && hasS2) {
+      // End of section 1 — jump to section 2
+      sessionEnd = null;
+      audio.currentTime = cut.start2;
+      updateScrubUI();
+      rafId = requestAnimationFrame(rafTick);
+      return;
+    }
+    // End of final segment — advance to next track
+    stopRaf();
+    const tracks = trackList();
+    const next   = currentIdx + 1;
+    if (mode === 'continuous') {
+      selectTrack(next < tracks.length ? next : 0, true);
+    } else {
+      audio.pause();
+      audio.currentTime = cut.start ?? 0;
+      document.getElementById('btnPlay').textContent = '▶';
+      updateScrubUI();
+    }
+    return;
+  }
+
+  rafId = requestAnimationFrame(rafTick);
+}
+
+// ── Scrub bar ──────────────────────────────────────────────
+const scrubBar = document.getElementById('scrubBar');
+
+audio.addEventListener('loadedmetadata', () => {
+  document.getElementById('timeDuration').textContent = formatTime(audio.duration);
+});
+
+// Paint the scrub bar fill given a 0–1 position fraction.
+// Called both from updateScrubUI (uses audio.currentTime) and from the
+// input handler (uses the drag value directly, so audio.currentTime is not read).
+function paintScrubBar(posFrac) {
+  const dur   = audio.duration || 0;
+  const cut   = currentCut();
+  const hasS2 = cut.start2 !== null;
+  const p     = (posFrac * 100).toFixed(2);
+
+  if (!dur) { scrubBar.style.background = '#d1d1d6'; return; }
+
+  // Virtual mode: posFrac is already the virtual fraction — simple clean bar
+  if (isVirtualMode()) {
+    scrubBar.style.background =
+      `linear-gradient(to right, #007aff ${p}%, #d1d1d6 ${p}%)`;
+    return;
+  }
+
+  if (!hasS2) {
+    // Single-section paint (original logic)
+    const effEnd = sessionEnd ?? cut.end;
+    const hasCut = cut.start !== null || effEnd !== null;
+    if (hasCut) {
+      const s = ((cut.start ?? 0) / dur * 100).toFixed(2);
+      const e = ((effEnd  ?? dur) / dur * 100).toFixed(2);
+      scrubBar.style.background =
+        `linear-gradient(to right,` +
+        `#e0e0e5 0% ${s}%,#007aff ${s}% ${p}%,#c8c8ce ${p}% ${e}%,#e0e0e5 ${e}% 100%)`;
+    } else {
+      scrubBar.style.background =
+        `linear-gradient(to right, #007aff ${p}%, #d1d1d6 ${p}%)`;
+    }
+    return;
+  }
+
+  // Two-section paint — both sections render as blue bands
+  const s1  = ((cut.start  ?? 0)          / dur * 100).toFixed(2);
+  const e1  = ((sessionEnd ?? cut.end ?? cut.start2) / dur * 100).toFixed(2);
+  const s2  = (cut.start2                 / dur * 100).toFixed(2);
+  const e2  = ((cut.end2   ?? dur)         / dur * 100).toFixed(2);
+  const inS2 = posFrac * dur >= cut.start2;
+
+  if (!inS2) {
+    scrubBar.style.background =
+      `linear-gradient(to right,` +
+      `#e0e0e5 0% ${s1}%,` +
+      `#007aff ${s1}% ${p}%,#c8c8ce ${p}% ${e1}%,` +
+      `#e0e0e5 ${e1}% ${s2}%,#c8c8ce ${s2}% ${e2}%,#e0e0e5 ${e2}% 100%)`;
+  } else {
+    scrubBar.style.background =
+      `linear-gradient(to right,` +
+      `#e0e0e5 0% ${s1}%,#007aff ${s1}% ${e1}%,` +
+      `#e0e0e5 ${e1}% ${s2}%,` +
+      `#007aff ${s2}% ${p}%,#c8c8ce ${p}% ${e2}%,#e0e0e5 ${e2}% 100%)`;
+  }
+}
+
+function updateScrubUI() {
+  const dur     = audio.duration || 0;
+  const cur     = audio.currentTime;
+  const startEl = document.getElementById('scrubMarkerStart');
+
+  if (isVirtualMode()) {
+    const vDur  = virtualDuration();
+    const vPos  = actualToVirtual(cur) ?? 0;
+    const frac  = vDur > 0 ? vPos / vDur : 0;
+    scrubBar.value = frac * 1000;
+    paintScrubBar(frac);
+    document.getElementById('timeElapsed').textContent = formatTime(vPos);
+    updateMarkButtonLabels(cur);
+    if (startEl) startEl.style.left = (frac * 100).toFixed(2) + '%';
+  } else {
+    const frac = dur ? cur / dur : 0;
+    scrubBar.value = frac * 1000;
+    paintScrubBar(frac);
+    document.getElementById('timeElapsed').textContent = formatTime(cur);
+    updateMarkButtonLabels(cur);
+    if (startEl && dur) startEl.style.left = (frac * 100).toFixed(2) + '%';
+  }
+}
+
+function seekFromClientX(clientX) {
+  if (!audio.duration) return;
+  const wrap = document.getElementById('scrubWrap');
+  const rect = wrap.getBoundingClientRect();
+  const frac = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+  const cut  = currentCut();
+
+  let t;
+  if (isVirtualMode()) {
+    const vDur = virtualDuration();
+    t = virtualToActual(frac * vDur);
+    t = Math.max(cut.start ?? 0, Math.min(cut.end2 ?? audio.duration, t));
+  } else {
+    t = frac * audio.duration;
+    const effEnd = sessionEnd ?? cut.end;
+    if (cut.start !== null) t = Math.max(t, cut.start);
+    if (effEnd    !== null) t = Math.min(t, effEnd);
+  }
+
+  audio.currentTime = t;
+  updateScrubUI();
+}
+
+function topDragMove(clientX) {
+  if (!topDragging || !audio.duration) return;
+  const dur  = audio.duration;
+  const wrap = document.getElementById('scrubWrap');
+  const rect = wrap.getBoundingClientRect();
+  const frac = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+
+  if (topDragging === 'start') {
+    // Green dot — seek. In virtual mode, frac maps through the combined timeline.
+    if (isVirtualMode()) {
+      const vDur = virtualDuration();
+      const cut  = currentCut();
+      let t = virtualToActual(frac * vDur);
+      t = Math.max(cut.start ?? 0, Math.min(cut.end2 ?? dur, t));
+      audio.currentTime = t;
+      updateScrubUI();
+    } else {
+      seekFromClientX(clientX);
+    }
+  } else if (!isVirtualMode()) {
+    // Orange dot — session end (single-section mode only)
+    const cut  = currentCut();
+    const minT = cut.start ?? 0;
+    const maxT = cut.end ?? dur;
+    let t = Math.max(minT, Math.min(maxT, frac * dur));
+    sessionEnd = (t >= maxT - 0.05) ? null : t;
+    updateScrubMarkers();
+    paintScrubBar(dur ? audio.currentTime / dur : 0);
+  }
+}
+
+document.getElementById('scrubWrap').addEventListener('mousedown', e => {
+  if (e.target.id === 'scrubMarkerStart') {
+    topDragging = 'start';
+    e.target.classList.add('grabbing');
+  } else if (e.target.id === 'scrubMarkerEnd') {
+    topDragging = 'end';
+    e.target.classList.add('grabbing');
+  } else {
+    isScrubbing = true;
+    seekFromClientX(e.clientX);
+  }
+  e.preventDefault();
+});
+
+// ── Trim UI ────────────────────────────────────────────────
+function updateTrimUI() {
+  const cut = currentCut();
+  const dur = audio.duration || 0;
+
+  const startSec = cut.start;
+  const endSec   = cut.end;
+  const startFrac = (startSec !== null && dur) ? Math.max(0, Math.min(1, startSec / dur)) : 0;
+  const endFrac   = (endSec   !== null && dur) ? Math.max(0, Math.min(1, endSec   / dur)) : 1;
+  const hasCut    = startSec !== null || endSec !== null || cut.start2 !== null;
+
+  // Handle positions
+  document.getElementById('handleStart').style.left = (startFrac * 100).toFixed(2) + '%';
+  document.getElementById('handleEnd').style.left   = (endFrac   * 100).toFixed(2) + '%';
+
+  // Fill between handles
+  const fillEl = document.getElementById('trimFill');
+  fillEl.style.left  = (startFrac * 100).toFixed(2) + '%';
+  fillEl.style.width = ((endFrac - startFrac) * 100).toFixed(2) + '%';
+  fillEl.style.background = hasCut ? 'rgba(0, 122, 255, 0.18)' : 'rgba(0, 122, 255, 0.08)';
+
+  // Time labels
+  document.getElementById('trimStartLabel').textContent =
+    startSec !== null ? formatTrimTime(startSec) : 'Start of track';
+  document.getElementById('trimEndLabel').textContent =
+    endSec   !== null ? formatTrimTime(endSec)   : 'End of track';
+
+  // Summary line
+  const summaryEl = document.getElementById('trimSummary');
+  const hasS2cut  = cut.start2 !== null;
+  if (!hasCut && !hasS2cut) {
+    summaryEl.textContent = 'Drag the dots or use the buttons below to trim this track.';
+  } else if (!hasS2cut) {
+    const fromStr = startSec !== null ? formatTrimTime(startSec) : '0:00.0';
+    const toStr   = endSec   !== null ? formatTrimTime(endSec)   : (dur ? formatTrimTime(dur) : 'end');
+    const playLen = dur ? (endSec ?? dur) - (startSec ?? 0) : null;
+    summaryEl.textContent = 'Plays ' + fromStr + ' → ' + toStr
+      + (playLen !== null ? '  (' + formatTrimTime(playLen) + ')' : '');
+  } else {
+    const s1from = startSec !== null ? formatTrimTime(startSec) : '0:00.0';
+    const s1to   = endSec   !== null ? formatTrimTime(endSec)   : '—';
+    const s2from = formatTrimTime(cut.start2);
+    const s2to   = cut.end2 !== null ? formatTrimTime(cut.end2) : (dur ? formatTrimTime(dur) : 'end');
+    summaryEl.textContent = s1from + ' → ' + s1to + ',  then  ' + s2from + ' → ' + s2to;
+  }
+
+  // Clear button
+  document.getElementById('btnClearTrim').classList.toggle('visible', hasCut);
+
+  // Duration label — show combined duration in virtual mode
+  if (audio.duration) {
+    const vDur = virtualDuration();
+    document.getElementById('timeDuration').textContent = formatTime(vDur ?? audio.duration);
+  }
+
+  // ── Section 2 panel ──
+  const s2Panel  = document.getElementById('section2Panel');
+  const btnAddS2 = document.getElementById('btnAddSection2');
+  const cut2start = cut.start2;
+  const cut2end   = cut.end2;
+
+  if (showSection2) {
+    s2Panel.classList.add('open');
+    if (btnAddS2) btnAddS2.style.display = 'none';
+
+    const s2Frac = (cut2start !== null && dur) ? Math.max(0, Math.min(1, cut2start / dur)) : 0;
+    const e2Frac = (cut2end   !== null && dur) ? Math.max(0, Math.min(1, cut2end   / dur)) : 1;
+
+    document.getElementById('handleStart2').style.left = (s2Frac * 100).toFixed(2) + '%';
+    document.getElementById('handleEnd2').style.left   = (e2Frac * 100).toFixed(2) + '%';
+
+    const fill2 = document.getElementById('trimFill2');
+    fill2.style.left       = (s2Frac * 100).toFixed(2) + '%';
+    fill2.style.width      = ((e2Frac - s2Frac) * 100).toFixed(2) + '%';
+    fill2.style.background = 'rgba(0,122,255,0.18)';
+
+    document.getElementById('trimStart2Label').textContent =
+      cut2start !== null ? formatTrimTime(cut2start) : '—';
+    document.getElementById('trimEnd2Label').textContent =
+      cut2end !== null ? formatTrimTime(cut2end) : 'End of track';
+  } else {
+    s2Panel.classList.remove('open');
+    if (btnAddS2) btnAddS2.style.display = '';
+  }
+
+  updateScrubMarkers();
+}
+
+function updateScrubMarkers() {
+  const dur   = audio.duration || 0;
+  const cut   = currentCut();
+  const endEl = document.getElementById('scrubMarkerEnd');
+  const startEl = document.getElementById('scrubMarkerStart');
+  if (!dur) return;
+
+  // Green dot — always visible, position driven by updateScrubUI
+  if (startEl) startEl.style.display = 'block';
+
+  // Orange dot — hidden in virtual mode (entire bar is playable content)
+  if (!endEl) return;
+  if (isVirtualMode()) {
+    endEl.style.display = 'none';
+    return;
+  }
+  const hasS2  = cut.start2 !== null;
+  const inS2   = hasS2 && audio.currentTime >= cut.start2;
+  const effEnd = inS2 ? (cut.end2 ?? dur) : (sessionEnd ?? cut.end ?? (hasS2 ? cut.start2 : dur));
+  endEl.style.left    = (Math.min(effEnd, dur) / dur * 100).toFixed(2) + '%';
+  endEl.style.display = 'block';
+}
+
+function updateMarkButtonLabels(t) {
+  const label = isFinite(t) ? formatTrimTime(t) : '—';
+  const s  = document.getElementById('btnMarkStart');
+  const e  = document.getElementById('btnMarkEnd');
+  const s2 = document.getElementById('btnMarkStart2');
+  const e2 = document.getElementById('btnMarkEnd2');
+  if (s)  s.textContent  = 'Set start → ' + label;
+  if (e)  e.textContent  = label + ' ← Set stop';
+  if (s2) s2.textContent = 'Set start → ' + label;
+  if (e2) e2.textContent = label + ' ← Set stop';
+}
+
+// ── Trim actions ───────────────────────────────────────────
+function markHere(point) {
+  const t = audio.currentTime;
+  if (!isFinite(t)) return;
+  const cut = currentCut();
+  const dur = audio.duration || 0;
+
+  if (point === 'start') {
+    const max = cut.end ?? dur;
+    if (t >= max) return;
+    saveCutPoint('start', t);
+  } else if (point === 'end') {
+    const min = cut.start ?? 0;
+    const max = cut.start2 !== null ? cut.start2 : dur;
+    if (t <= min || t > max) return;
+    saveCutPoint('end', t >= dur ? null : t);
+  } else if (point === 'start2') {
+    const min = (cut.end ?? 0) + 0.05;
+    const max = cut.end2 ?? dur;
+    if (t < min || t >= max) return;
+    saveCutPoint('start2', t);
+  } else if (point === 'end2') {
+    const min = (cut.start2 ?? 0) + 0.05;
+    if (t < min) return;
+    saveCutPoint('end2', t >= dur ? null : t);
+  }
+}
+
+function nudge(point, delta) {
+  const cut = currentCut();
+  const dur = audio.duration || 0;
+
+  if (point === 'start') {
+    const current = cut.start ?? 0;
+    const max     = (cut.end !== null ? cut.end : dur) - 0.1;
+    const newVal  = Math.max(0, Math.min(max, current + delta));
+    saveCutPoint('start', newVal === 0 && cut.start === null ? null : newVal);
+  } else if (point === 'end') {
+    const current = cut.end ?? dur;
+    const min     = (cut.start ?? 0) + 0.1;
+    const max     = cut.start2 !== null ? cut.start2 - 0.1 : dur;
+    const newVal  = Math.max(min, Math.min(max, current + delta));
+    saveCutPoint('end', newVal >= dur ? null : newVal);
+  } else if (point === 'start2') {
+    const current = cut.start2 ?? 0;
+    const min     = (cut.end ?? 0) + 0.1;
+    const max     = (cut.end2 !== null ? cut.end2 : dur) - 0.1;
+    const newVal  = Math.max(min, Math.min(max, current + delta));
+    saveCutPoint('start2', newVal);
+  } else if (point === 'end2') {
+    const current = cut.end2 ?? dur;
+    const min     = (cut.start2 ?? 0) + 0.1;
+    const newVal  = Math.max(min, Math.min(dur, current + delta));
+    saveCutPoint('end2', newVal >= dur ? null : newVal);
+  }
+}
+
+// ── Trim bar drag ──────────────────────────────────────────
+let dragging = null;
+
+const HANDLE_IDS = { start: 'handleStart', end: 'handleEnd', start2: 'handleStart2', end2: 'handleEnd2' };
+
+function getBarFrac(clientX, trackEl) {
+  const track = trackEl || document.getElementById('trimTrack');
+  const rect  = track.getBoundingClientRect();
+  return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+}
+
+function onHandleDown(e, which) {
+  dragging = which;
+  document.getElementById(HANDLE_IDS[which]).classList.add('grabbing');
+  e.preventDefault();
+}
+
+document.getElementById('handleStart').addEventListener('mousedown',  e => onHandleDown(e, 'start'));
+document.getElementById('handleEnd').addEventListener('mousedown',    e => onHandleDown(e, 'end'));
+document.getElementById('handleStart').addEventListener('touchstart', e => onHandleDown(e, 'start'), { passive: false });
+document.getElementById('handleEnd').addEventListener('touchstart',   e => onHandleDown(e, 'end'),   { passive: false });
+document.getElementById('handleStart2').addEventListener('mousedown',  e => onHandleDown(e, 'start2'));
+document.getElementById('handleEnd2').addEventListener('mousedown',    e => onHandleDown(e, 'end2'));
+document.getElementById('handleStart2').addEventListener('touchstart', e => onHandleDown(e, 'start2'), { passive: false });
+document.getElementById('handleEnd2').addEventListener('touchstart',   e => onHandleDown(e, 'end2'),   { passive: false });
+
+function onDragMove(clientX) {
+  if (!dragging || !audio.duration) return;
+  const isS2   = dragging === 'start2' || dragging === 'end2';
+  const trackEl = isS2 ? document.getElementById('trimTrack2') : document.getElementById('trimTrack');
+  const frac   = getBarFrac(clientX, trackEl);
+  const secs   = frac * audio.duration;
+  const cut    = currentCut();
+
+  if (dragging === 'start') {
+    const max = (cut.end !== null ? cut.end : audio.duration) - 0.1;
+    const val = Math.max(0, Math.min(max, secs));
+    saveCutPoint('start', val);
+    audio.currentTime = val;
+    updateScrubUI();
+  } else if (dragging === 'end') {
+    const min = (cut.start ?? 0) + 0.1;
+    const max = cut.start2 !== null ? cut.start2 - 0.1 : audio.duration;
+    const val = Math.max(min, Math.min(max, secs));
+    saveCutPoint('end', val >= audio.duration ? null : val);
+  } else if (dragging === 'start2') {
+    const min = (cut.end ?? 0) + 0.1;
+    const max = (cut.end2 !== null ? cut.end2 : audio.duration) - 0.1;
+    const val = Math.max(min, Math.min(max, secs));
+    saveCutPoint('start2', val);
+  } else if (dragging === 'end2') {
+    const min = (cut.start2 ?? 0) + 0.1;
+    const val = Math.max(min, Math.min(audio.duration, secs));
+    saveCutPoint('end2', val >= audio.duration ? null : val);
+  }
+}
+
+document.addEventListener('mousemove', e => {
+  if (topDragging)  topDragMove(e.clientX);
+  else if (dragging) onDragMove(e.clientX);
+  else if (isScrubbing) seekFromClientX(e.clientX);
+});
+document.addEventListener('touchmove', e => {
+  if (dragging) { e.preventDefault(); onDragMove(e.touches[0].clientX); }
+}, { passive: false });
+
+function onDragEnd() {
+  if (topDragging) {
+    document.getElementById('scrubMarker' + (topDragging === 'start' ? 'Start' : 'End')).classList.remove('grabbing');
+    topDragging = null;
+  }
+  if (dragging) {
+    document.getElementById(HANDLE_IDS[dragging]).classList.remove('grabbing');
+    dragging = null;
+  }
+  isScrubbing = false;
+}
+document.addEventListener('mouseup',  onDragEnd);
+document.addEventListener('touchend', onDragEnd);
+
+// ── Mode ───────────────────────────────────────────────────
+function setMode(m) {
+  mode = m;
+  document.getElementById('btnContinuous').classList.toggle('active', m === 'continuous');
+  document.getElementById('btnSingle').classList.toggle('active',     m === 'single');
+}
+
+// ── Helpers ────────────────────────────────────────────────
+function showNowPlaying(show) {
+  document.getElementById('idleMsg').style.display = show ? 'none' : '';
+  document.getElementById('nowPlaying').classList.toggle('visible', show);
+  if (show) updateTrimUI();
+}
+
+function formatTime(s) {
+  if (!s || !isFinite(s)) return '0:00';
+  const m = Math.floor(s / 60);
+  return m + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+}
+
+function formatTrimTime(s) {
+  if (s === null || !isFinite(s)) return '—';
+  const m    = Math.floor(s / 60);
+  const secs = s % 60;
+  return m + ':' + (secs < 10 ? '0' : '') + secs.toFixed(1);
+}
+
+// ── Keyboard ───────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.key === ' ')                  { e.preventDefault(); togglePlay(); }
+  if (e.key === 'Escape')             stopPlayback();
+  if (e.key === 'n' || e.key === 'N') nextTrack();
+});
+</script>
+</body>
+</html>

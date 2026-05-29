@@ -1,0 +1,78 @@
+{
+  "showTitle": "Unexpected Stories",
+  "songs": [
+    {
+      "title": "01 - Our Turn Now",
+      "instr": "audio/01 - Our Turn Now - FINAL (Instrumental).mp3",
+      "vocal": "audio/01 - Our Turn Now - FINAL (Vocals).mp3"
+    },
+    {
+      "title": "02 - Pick Me",
+      "instr": "audio/02 - Pick Me - FINAL (Instrumental).mp3",
+      "vocal": "audio/02 - Pick Me - FINAL (Vocals).mp3"
+    },
+    {
+      "title": "03 - I'll Find you Soon",
+      "instr": "audio/03 - I'll Find you Soon  (Instrumental).mp3",
+      "vocal": "audio/03 - I'll Find you Soon  (vocals).mp3"
+    },
+    {
+      "title": "04 - Peddler Song",
+      "instr": "audio/04 - Peddler Song - FINAL (Instrumental).mp3",
+      "vocal": "audio/04 - Peddler Song - FINAL (Vocals).mp3"
+    },
+    {
+      "title": "05 - It's You (Version 1)",
+      "instr": "audio/05 - It's You - Version 1 - FINAL (Instrumental).mp3",
+      "vocal": "audio/05 - It's You - Version 1 - FINAL (Vocals).mp3"
+    },
+    {
+      "title": "06 - No One Knows our Names",
+      "instr": "audio/06 - No One Knows our Names - FINAL (Instrumental).mp3",
+      "vocal": "audio/06 - No One Knows our Names - FINAL (Vocals).mp3"
+    },
+    {
+      "title": "07 - Peddler Song - Reprise",
+      "instr": "audio/07 - Peddler Song PT1 - Reprise (Instrumental).mp3",
+      "vocal": "audio/07 - Peddler Song PT1 - Reprise (Vocal).mp3",
+      "vamp": {
+        "instr": "audio/07 - Peddler Song VAMP - Reprise (Instrumental).mp3",
+        "vocal": "audio/07 - Peddler Song VAMP - Reprise (Vocal).mp3"
+      },
+      "postVamp": {
+        "instr": "audio/07 - Peddler Song PT3 - Reprise (Instrumental).mp3",
+        "vocal": "audio/07 - Peddler Song PT3 - Reprise (Vocal).mp3"
+      }
+    },
+    {
+      "title": "08 - It's You (Version 2)",
+      "instr": "audio/08 - It's You - Version 2 - FINAL (Instrumental).mp3",
+      "vocal": "audio/08 - It's You - Version 2 - FINAL (Vocals).mp3"
+    },
+    {
+      "title": "09a - Peddler on the Roof 1",
+      "type": "cue",
+      "src": "audio/09a - Peddler on the Roof 1 (cue).mp3"
+    },
+    {
+      "title": "09b - Peddler on the Roof 2 - tag",
+      "type": "cue",
+      "src": "audio/09b - Peddler on the Roof 2 - tag (cue).mp3"
+    },
+    {
+      "title": "10 - Jack Was a Hack",
+      "instr": "audio/10 - Jack Was a Hack (instrumental).mp3",
+      "vocal": "audio/10 -Jack Was a Hack (vocals).mp3"
+    },
+    {
+      "title": "11 - Scientifically Terrific",
+      "instr": "audio/11 - Scientifically Terrific - FINAL (Instrumental).mp3",
+      "vocal": "audio/11 - Scientifically Terrific - FINAL (Vocals).mp3"
+    },
+    {
+      "title": "12 - Unexpected Endings",
+      "instr": "audio/12 - Unexpected Endings - FINAL (Instrumental).mp3",
+      "vocal": "audio/12 - Unexpected Endings - FINAL (Vocals).mp3"
+    }
+  ]
+}

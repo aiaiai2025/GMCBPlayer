@@ -1,0 +1,2365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#111111">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="StemPlayer">
+    <title>Stem Player 2.2</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif;
+            background: #1c1c1e;
+            color: #d0d0d0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ── Header ── */
+        header {
+            background: #111;
+            padding: 0 20px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #2c2c2e;
+            flex-shrink: 0;
+        }
+        header h1 {
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: #888;
+        }
+        header .version {
+            font-size: 11px;
+            color: #444;
+            letter-spacing: 1px;
+        }
+
+        /* ── Layout ── */
+        .app {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            width: 220px;
+            background: #161618;
+            border-right: 1px solid #2c2c2e;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .sidebar-top {
+            padding: 14px 12px;
+            border-bottom: 1px solid #2c2c2e;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .load-btn {
+            padding: 9px 12px;
+            background: #2c5f9e;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            width: 100%;
+            text-align: center;
+            transition: background 0.15s;
+        }
+        .load-btn:hover { background: #3a72b8; }
+        .load-btn:active { background: #244e88; }
+
+        .load-hint {
+            font-size: 11px;
+            color: #555;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        .song-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 6px 0;
+        }
+        .song-list::-webkit-scrollbar { width: 4px; }
+        .song-list::-webkit-scrollbar-track { background: transparent; }
+        .song-list::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+        .song-item {
+            padding: 11px 14px;
+            cursor: pointer;
+            font-size: 13px;
+            border-left: 3px solid transparent;
+            color: #aaa;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: background 0.1s, color 0.1s;
+            user-select: none;
+        }
+        .song-item:hover { background: #222; color: #ddd; }
+        .song-item.active {
+            background: #1a3a5c;
+            border-left-color: #2c5f9e;
+            color: #fff;
+        }
+        .song-item.loading-item {
+            color: #555;
+            font-style: italic;
+        }
+
+        .empty-list {
+            padding: 20px 14px;
+            color: #444;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        /* ── Player Area ── */
+        .player {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 32px 60px;
+            gap: 30px;
+        }
+
+        .idle-message {
+            color: #444;
+            font-size: 15px;
+            text-align: center;
+            line-height: 1.8;
+        }
+
+        /* Status overlay */
+        .status-bar {
+            font-size: 12px;
+            color: #888;
+            letter-spacing: 1px;
+            height: 16px;
+            text-align: center;
+        }
+
+        /* Song title */
+        .song-title {
+            font-size: 26px;
+            font-weight: 300;
+            color: #fff;
+            text-align: center;
+            letter-spacing: 0.3px;
+            max-width: 600px;
+        }
+
+        /* Scrub bar */
+        .scrub-section {
+            width: 100%;
+            max-width: 580px;
+        }
+        .time-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #555;
+            margin-bottom: 9px;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0.5px;
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 5px;
+            border-radius: 3px;
+            background: #333;
+            outline: none;
+            cursor: pointer;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:active { transform: scale(1.2); }
+
+        #scrubBar::-webkit-slider-thumb { background: #5a9ae0; }
+        #scrubBar { background: linear-gradient(to right, #2c5f9e 0%, #333 0%); }
+
+        /* Transport */
+        .transport {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .btn-stop {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #2c2c2e;
+            border: 1px solid #3a3a3c;
+            color: #aaa;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s;
+        }
+        .btn-stop:hover { background: #3a3a3c; color: #fff; }
+
+        .btn-play {
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            background: #2c5f9e;
+            border: none;
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s;
+            box-shadow: 0 4px 16px rgba(44, 95, 158, 0.4);
+        }
+        .btn-play:hover { background: #3a72b8; }
+        .btn-play:active { background: #244e88; }
+        .btn-play:disabled { background: #333; box-shadow: none; cursor: default; }
+
+        .btn-loop {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #2c2c2e;
+            border: 1px solid #3a3a3c;
+            color: #555;
+            font-size: 17px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
+        }
+        .btn-loop:hover { background: #3a3a3c; color: #aaa; }
+        .btn-loop.loop-active {
+            background: #0d2a1a;
+            border-color: #34d399;
+            color: #34d399;
+            box-shadow: 0 0 10px rgba(52, 211, 153, 0.25);
+        }
+
+        /* Controls row */
+        .controls-row {
+            display: flex;
+            gap: 32px;
+            align-items: flex-start;
+            justify-content: center;
+            width: 100%;
+            max-width: 920px;
+        }
+
+        /* Shared control section */
+        .control-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .section-label {
+            font-size: 10px;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: #555;
+        }
+
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+        .slider-end-label {
+            font-size: 10px;
+            color: #444;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            flex-shrink: 0;
+            width: 28px;
+        }
+        .slider-end-label.right { text-align: right; }
+
+        #vocalSlider::-webkit-slider-thumb { background: #e0932a; }
+        #vocalSlider { background: linear-gradient(to right, #e0932a 100%, #333 100%); }
+
+        #tempoSlider::-webkit-slider-thumb { background: #4ecdc4; }
+        #tempoSlider { background: linear-gradient(to right, #2a7a76 50%, #333 50%); }
+
+        #pitchSlider::-webkit-slider-thumb { background: #a78bfa; }
+        #pitchSlider { background: linear-gradient(to right, #333 50%, #6d28d9 50%); }
+
+        .control-value {
+            font-size: 12px;
+            color: #888;
+            width: 38px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            flex-shrink: 0;
+        }
+
+        /* Preset buttons */
+        .preset-row {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .preset-btn {
+            padding: 4px 9px;
+            border-radius: 12px;
+            border: 1px solid #333;
+            background: transparent;
+            color: #666;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .preset-btn:hover { border-color: #555; color: #aaa; }
+        .preset-btn.active-preset-vocal  { border-color: #e0932a; color: #e0932a; }
+        .preset-btn.active-preset-tempo  { border-color: #4ecdc4; color: #4ecdc4; }
+        .preset-btn.active-preset-pitch  { border-color: #a78bfa; color: #a78bfa; }
+
+        /* Locked state — tempo & pitch greyed out during playback */
+        .control-section.locked { opacity: 0.35; pointer-events: none; }
+        .control-section.locked .section-label::after {
+            content: ' — locked during playback';
+            font-size: 9px;
+            letter-spacing: 1px;
+            opacity: 0.7;
+        }
+
+        /* Divider between control sections */
+        .controls-divider {
+            width: 1px;
+            background: #2c2c2e;
+            align-self: stretch;
+            margin-top: 18px;
+        }
+
+        /* ── Loop Region — two separate rows, no overlay tricks ── */
+        .region-section {
+            width: 100%;
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .region-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .region-row-label {
+            font-size: 10px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            flex-shrink: 0;
+            width: 34px;
+        }
+
+        /* regionIn / regionOut inherit the shared input[type=range] base styles */
+        #regionIn, #regionOut { flex: 1; width: auto; }
+        #regionIn::-webkit-slider-thumb  { background: #34d399; }
+        #regionOut::-webkit-slider-thumb { background: #f87171; }
+
+        .region-time-val {
+            font-size: 10px;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0.5px;
+            flex-shrink: 0;
+            width: 34px;
+            text-align: right;
+        }
+        #regionInTime  { color: #34d399; }
+        #regionOutTime { color: #f87171; }
+        #regionInTime.dim, #regionOutTime.dim { color: #444; }
+
+        .region-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 1px;
+        }
+
+        .region-label {
+            color: #444;
+            font-size: 9px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            flex: 1;
+            text-align: center;
+        }
+        .region-label.active { color: #777; }
+
+        .region-clear-btn {
+            padding: 3px 9px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            background: transparent;
+            color: #555;
+            font-size: 9px;
+            cursor: pointer;
+            letter-spacing: 0.5px;
+            transition: all 0.15s;
+            flex-shrink: 0;
+        }
+        .region-clear-btn:hover { border-color: #666; color: #999; }
+
+
+        /* ── Sidebar show title ── */
+        .show-title {
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #aaa;
+            text-align: center;
+            padding: 4px 0 2px;
+        }
+        .manifest-status {
+            font-size: 11px;
+            color: #555;
+            text-align: center;
+            min-height: 14px;
+        }
+        .manifest-error {
+            color: #f87171;
+        }
+
+        /* ════════════════════════════════════════════════════
+           Mobile-menu button — hidden on desktop
+        ════════════════════════════════════════════════════ */
+        .mobile-menu-btn {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: none;
+            color: #888;
+            font-size: 20px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background 0.15s, color 0.15s;
+            flex-shrink: 0;
+        }
+        .mobile-menu-btn:hover { background: #2c2c2e; color: #ddd; }
+
+        /* Backdrop (mobile only) */
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.55);
+            z-index: 99;
+        }
+        .sidebar-backdrop.open { display: block; }
+
+        /* ════════════════════════════════════════════════════
+           Mobile layout  ≤ 640 px
+        ════════════════════════════════════════════════════ */
+        @media (max-width: 640px) {
+
+            /* Fix iOS Safari 100vh + bouncing-bar bug */
+            body {
+                height: 100dvh;
+                min-height: -webkit-fill-available;
+            }
+
+            /* Sidebar slides in as a drawer */
+            .sidebar {
+                position: fixed;
+                top: 0; left: 0; bottom: 0;
+                z-index: 100;
+                width: 80vw;
+                max-width: 300px;
+                transform: translateX(-110%);
+                transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+                box-shadow: 6px 0 32px rgba(0,0,0,0.6);
+            }
+            .sidebar.open { transform: translateX(0); }
+
+            /* Show hamburger button */
+            .mobile-menu-btn { display: flex; }
+
+            /* Player fills the screen */
+            .player {
+                padding: 16px 16px 20px;
+                gap: 20px;
+                overflow-y: auto;
+            }
+
+            /* Song title smaller */
+            .song-title { font-size: 20px; }
+
+            /* Status bar */
+            .status-bar { font-size: 11px; }
+
+            /* Controls stack vertically */
+            .controls-row {
+                flex-direction: column;
+                gap: 22px;
+                max-width: 100%;
+            }
+            .controls-divider { display: none; }
+
+            /* Each section full-width */
+            .control-section { width: 100%; }
+
+            /* Bigger range sliders for thumbs */
+            input[type=range] { height: 8px; border-radius: 4px; }
+            input[type=range]::-webkit-slider-thumb {
+                width: 24px;
+                height: 24px;
+            }
+
+            /* Bigger transport buttons */
+            .btn-play {
+                width: 68px;
+                height: 68px;
+                font-size: 22px;
+            }
+            .btn-stop, .btn-loop {
+                width: 46px;
+                height: 46px;
+                font-size: 16px;
+            }
+
+            /* Preset buttons easier to tap */
+            .preset-btn {
+                padding: 7px 13px;
+                font-size: 12px;
+            }
+
+            /* Region labels bigger */
+            .region-row-label { font-size: 12px; width: 38px; }
+            .region-time-val  { font-size: 12px; width: 38px; }
+
+            /* Section labels */
+            .section-label { font-size: 11px; }
+
+            /* Scrub area */
+            .scrub-section { max-width: 100%; }
+
+            /* Time row */
+            .time-row { font-size: 12px; }
+        }
+
+        /* ── Offline / cached indicator ── */
+        .cache-badge {
+            font-size: 9px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            padding: 2px 7px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            color: #555;
+            flex-shrink: 0;
+        }
+        .cache-badge.cached  { border-color: #34d399; color: #34d399; }
+        .cache-badge.offline { border-color: #f59e0b; color: #f59e0b; }
+    </style>
+</head>
+<body>
+
+<header>
+    <button class="mobile-menu-btn" id="menuBtn" onclick="toggleSidebar()" title="Song list">&#9776;</button>
+    <h1>Stem Player</h1>
+    <span class="version">v2.2</span>
+    <span class="cache-badge" id="cacheBadge"></span>
+</header>
+
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+
+<div class="app">
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-top">
+            <div class="show-title" id="showTitle">Stem Player</div>
+            <div class="manifest-status" id="manifestStatus">Loading songs…</div>
+        </div>
+        <div class="song-list" id="songList">
+            <div class="empty-list" id="emptyList">Loading…</div>
+        </div>
+    </div>
+
+    <!-- Player -->
+    <div class="player" id="player">
+        <div class="idle-message">Select a song from the list<br>to begin.</div>
+    </div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// SoundTouch core — runs in main thread (no AudioWorklet, works with file://)
+// ══════════════════════════════════════════════════════════════════════════════
+//#region ../core/src/FifoSampleBuffer.ts
+/**
+* Number of bytes per sample (Float32).
+*/
+var BYTES_PER_SAMPLE = 4;
+/**
+* Number of samples per audio frame (stereo).
+*/
+var SAMPLES_PER_FRAME = 2;
+/**
+* Number of bytes per audio frame.
+*/
+var BYTES_PER_FRAME = BYTES_PER_SAMPLE * SAMPLES_PER_FRAME;
+/**
+* Default maximum number of frames for buffer allocation.
+*/
+var DEFAULT_MAX_FRAMES = 131072;
+/**
+* Resizable interleaved sample buffer for audio processing.
+* Uses ES2024 ArrayBuffer for zero-allocation growth.
+*
+* @remarks
+* Stores stereo audio samples in a contiguous Float32Array
+* Provides methods for efficient buffer management and sample transfer
+*/
+var FifoSampleBuffer = class {
+	/**
+	* Backing ArrayBuffer for sample storage
+	*/
+	_buffer;
+	/**
+	* Float32Array view of the buffer
+	*/
+	_vector;
+	/**
+	* Current read position (frame index)
+	*/
+	_position;
+	/**
+	* Number of frames currently stored
+	*/
+	_frameCount;
+	/**
+	* Creates a new FifoSampleBuffer
+	* @param maxFrames Maximum number of frames for buffer allocation
+	*/
+	constructor(maxFrames = DEFAULT_MAX_FRAMES) {
+		this._buffer = new ArrayBuffer(0, { maxByteLength: maxFrames * BYTES_PER_FRAME });
+		this._vector = new Float32Array(this._buffer);
+		this._position = 0;
+		this._frameCount = 0;
+	}
+	/**
+	* Returns the Float32Array view of the buffer
+	*/
+	get vector() {
+		return this._vector;
+	}
+	/**
+	* Returns the current read position (frame index)
+	*/
+	get position() {
+		return this._position;
+	}
+	/**
+	* Returns the start sample index for reading
+	*/
+	get startIndex() {
+		return this._position * 2;
+	}
+	/**
+	* Returns the number of frames currently stored
+	*/
+	get frameCount() {
+		return this._frameCount;
+	}
+	/**
+	* Returns the end sample index for reading
+	*/
+	get endIndex() {
+		return (this._position + this._frameCount) * 2;
+	}
+	/**
+	* Clears the buffer and resets position and frame count
+	*/
+	clear() {
+		this._vector.fill(0);
+		this._position = 0;
+		this._frameCount = 0;
+	}
+	/**
+	* Adds empty frames to the buffer
+	* @param numFrames Number of frames to add
+	*/
+	put(numFrames) {
+		this._frameCount += numFrames;
+	}
+	/**
+	* Adds samples to the buffer from a Float32Array
+	* @param samples Source samples (interleaved stereo)
+	* @param position Start frame index in source
+	* @param numFrames Number of frames to copy (default: all available)
+	*/
+	putSamples(samples, position = 0, numFrames = 0) {
+		const sourceOffset = position * 2;
+		if (!(numFrames >= 0) || numFrames === 0) numFrames = (samples.length - sourceOffset) / 2;
+		const numSamples = numFrames * 2;
+		this.ensureCapacity(numFrames + this._frameCount);
+		const destOffset = this.endIndex;
+		this._vector.set(samples.subarray(sourceOffset, sourceOffset + numSamples), destOffset);
+		this._frameCount += numFrames;
+	}
+	/**
+	* Adds samples from another FifoSampleBuffer
+	* @param buffer Source buffer
+	* @param position Start frame index in source buffer
+	* @param numFrames Number of frames to copy (default: all available)
+	*/
+	putBuffer(buffer, position = 0, numFrames = 0) {
+		if (!(numFrames >= 0) || numFrames === 0) numFrames = buffer.frameCount - position;
+		this.putSamples(buffer.vector, buffer.position + position, numFrames);
+	}
+	/**
+	* Advances the read position and reduces frame count
+	* @param numFrames Number of frames to receive (default: all available)
+	*/
+	receive(numFrames) {
+		if (numFrames === void 0 || !(numFrames >= 0) || numFrames > this._frameCount) numFrames = this._frameCount;
+		this._frameCount -= numFrames;
+		this._position += numFrames;
+	}
+	/**
+	* Copies and receives samples into an output array
+	* @param output Destination Float32Array
+	* @param numFrames Number of frames to copy and receive
+	*/
+	receiveSamples(output, numFrames = 0) {
+		const numSamples = numFrames * 2;
+		const sourceOffset = this.startIndex;
+		output.set(this._vector.subarray(sourceOffset, sourceOffset + numSamples));
+		this.receive(numFrames);
+	}
+	/**
+	* Extracts samples into an output array without advancing position
+	* @param output Destination Float32Array
+	* @param position Start frame index in buffer
+	* @param numFrames Number of frames to extract
+	*/
+	extract(output, position = 0, numFrames = 0) {
+		const sourceOffset = this.startIndex + position * 2;
+		const numSamples = numFrames * 2;
+		output.set(this._vector.subarray(sourceOffset, sourceOffset + numSamples));
+	}
+	/**
+	* Ensures the buffer has capacity for at least numFrames
+	* @param numFrames Minimum number of frames required
+	*/
+	ensureCapacity(numFrames = 0) {
+		const minLength = Math.floor(numFrames * SAMPLES_PER_FRAME);
+		if (this._vector.length < minLength) {
+			const newByteLength = minLength * BYTES_PER_SAMPLE;
+			if (newByteLength <= this._buffer.maxByteLength) {
+				this.rewind();
+				this._buffer.resize(newByteLength);
+				this._vector = new Float32Array(this._buffer);
+			} else {
+				const newMaxBytes = newByteLength * 2;
+				const newBuffer = new ArrayBuffer(newByteLength, { maxByteLength: newMaxBytes });
+				const newVector = new Float32Array(newBuffer);
+				newVector.set(this._vector.subarray(this.startIndex, this.endIndex));
+				this._buffer = newBuffer;
+				this._vector = newVector;
+				this._position = 0;
+			}
+		} else this.rewind();
+	}
+	/**
+	* Ensures buffer has capacity for additional frames
+	* @param numFrames Number of additional frames required
+	*/
+	ensureAdditionalCapacity(numFrames = 0) {
+		this.ensureCapacity(this._frameCount + numFrames);
+	}
+	/**
+	* Moves all unread samples to the start of the buffer
+	*/
+	rewind() {
+		if (this._position > 0) {
+			this._vector.set(this._vector.subarray(this.startIndex, this.endIndex));
+			this._position = 0;
+		}
+	}
+};
+//#endregion
+//#region ../core/src/AbstractFifoSamplePipe.ts
+/**
+* Abstract base class for sample processing pipes
+* Provides common buffer management for audio processing
+*
+* @remarks
+* This class manages input and output buffers for audio sample processing
+* Subclasses should implement specific processing logic
+*/
+var AbstractFifoSamplePipe = class {
+	/**
+	* Input buffer for audio samples
+	*/
+	_inputBuffer;
+	/**
+	* Output buffer for processed audio samples
+	*/
+	_outputBuffer;
+	/**
+	* Constructs an AbstractFifoSamplePipe
+	* @param createBuffers If true, initializes input and output buffers
+	*/
+	constructor(createBuffers) {
+		if (createBuffers) {
+			this._inputBuffer = new FifoSampleBuffer();
+			this._outputBuffer = new FifoSampleBuffer();
+		} else {
+			this._inputBuffer = null;
+			this._outputBuffer = null;
+		}
+	}
+	/**
+	* Gets the input buffer.
+	*/
+	get inputBuffer() {
+		return this._inputBuffer;
+	}
+	/**
+	* Sets the input buffer.
+	*/
+	set inputBuffer(inputBuffer) {
+		this._inputBuffer = inputBuffer;
+	}
+	/**
+	* Gets the output buffer.
+	*/
+	get outputBuffer() {
+		return this._outputBuffer;
+	}
+	/**
+	* Sets the output buffer
+	*/
+	set outputBuffer(outputBuffer) {
+		this._outputBuffer = outputBuffer;
+	}
+	/**
+	* Clears both input and output buffers
+	*/
+	clear() {
+		this._inputBuffer?.clear();
+		this._outputBuffer?.clear();
+	}
+};
+//#endregion
+//#region ../core/src/RateTransposer.ts
+/**
+* Sample rate transposer for pitch and tempo manipulation.
+* Used internally by SoundTouch for rate-based processing.
+*/
+var RateTransposer = class RateTransposer extends AbstractFifoSamplePipe {
+	/**
+	* Current rate factor for transposition.
+	*/
+	_rate;
+	/**
+	* Internal slope accumulator for interpolation.
+	*/
+	slopeCount;
+	/**
+	* Previous left channel sample for interpolation.
+	*/
+	prevSampleL;
+	/**
+	* Previous right channel sample for interpolation.
+	*/
+	prevSampleR;
+	/**
+	* Creates a RateTransposer instance.
+	* @param createBuffers Whether to allocate internal buffers.
+	*/
+	constructor(createBuffers) {
+		super(createBuffers);
+		this.slopeCount = 0;
+		this.prevSampleL = 0;
+		this.prevSampleR = 0;
+		this._rate = 1;
+	}
+	/**
+	* Sets the rate factor for transposition.
+	* @param rate Rate factor.
+	*/
+	set rate(rate) {
+		this._rate = rate;
+	}
+	/**
+	* Resets internal state for interpolation.
+	*/
+	reset() {
+		this.slopeCount = 0;
+		this.prevSampleL = 0;
+		this.prevSampleR = 0;
+	}
+	/**
+	* Clears buffers and resets internal state.
+	*/
+	clear() {
+		super.clear();
+		this.reset();
+	}
+	/**
+	* Creates a clone of this RateTransposer with the same rate.
+	* @returns Cloned RateTransposer instance.
+	*/
+	clone() {
+		const result = new RateTransposer();
+		result.rate = this._rate;
+		return result;
+	}
+	/**
+	* Processes input buffer and writes transposed samples to output buffer.
+	*/
+	process() {
+		const numFrames = this._inputBuffer.frameCount;
+		this._outputBuffer.ensureAdditionalCapacity(numFrames / this._rate + 1);
+		const numFramesOutput = this.transpose(numFrames);
+		this._inputBuffer.receive();
+		this._outputBuffer.put(numFramesOutput);
+	}
+	/**
+	* Transposes input samples by the current rate.
+	* @param numFrames Number of input frames to transpose.
+	* @returns Number of output frames written.
+	*/
+	transpose(numFrames = 0) {
+		if (numFrames === 0) return 0;
+		const src = this._inputBuffer.vector;
+		const srcOffset = this._inputBuffer.startIndex;
+		const dest = this._outputBuffer.vector;
+		const destOffset = this._outputBuffer.endIndex;
+		let used = 0;
+		let i = 0;
+		while (this.slopeCount < 1) {
+			dest[destOffset + 2 * i] = (1 - this.slopeCount) * this.prevSampleL + this.slopeCount * src[srcOffset];
+			dest[destOffset + 2 * i + 1] = (1 - this.slopeCount) * this.prevSampleR + this.slopeCount * src[srcOffset + 1];
+			i = i + 1;
+			this.slopeCount += this._rate;
+		}
+		this.slopeCount -= 1;
+		if (numFrames !== 1) out: while (true) {
+			while (this.slopeCount > 1) {
+				this.slopeCount -= 1;
+				used = used + 1;
+				if (used >= numFrames - 1) break out;
+			}
+			const srcIndex = srcOffset + 2 * used;
+			dest[destOffset + 2 * i] = (1 - this.slopeCount) * src[srcIndex] + this.slopeCount * src[srcIndex + 2];
+			dest[destOffset + 2 * i + 1] = (1 - this.slopeCount) * src[srcIndex + 1] + this.slopeCount * src[srcIndex + 3];
+			i = i + 1;
+			this.slopeCount += this._rate;
+		}
+		this.prevSampleL = src[srcOffset + 2 * numFrames - 2];
+		this.prevSampleR = src[srcOffset + 2 * numFrames - 1];
+		return i;
+	}
+};
+//#endregion
+//#region ../core/src/Stretch.ts
+var DEFAULT_SEQUENCE_MS = 0;
+var DEFAULT_SEEKWINDOW_MS = 0;
+var DEFAULT_OVERLAP_MS = 8;
+var _SCAN_OFFSETS = [
+	[
+		124,
+		186,
+		248,
+		310,
+		372,
+		434,
+		496,
+		558,
+		620,
+		682,
+		744,
+		806,
+		868,
+		930,
+		992,
+		1054,
+		1116,
+		1178,
+		1240,
+		1302,
+		1364,
+		1426,
+		1488,
+		0
+	],
+	[
+		-100,
+		-75,
+		-50,
+		-25,
+		25,
+		50,
+		75,
+		100,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0
+	],
+	[
+		-20,
+		-15,
+		-10,
+		-5,
+		5,
+		10,
+		15,
+		20,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0
+	],
+	[
+		-4,
+		-3,
+		-2,
+		-1,
+		1,
+		2,
+		3,
+		4,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0
+	]
+];
+var AUTOSEQ_TEMPO_LOW = .25;
+var AUTOSEQ_TEMPO_TOP = 4;
+var AUTOSEQ_AT_MIN = 125;
+var AUTOSEQ_AT_MAX = 50;
+var AUTOSEQ_K = (AUTOSEQ_AT_MAX - AUTOSEQ_AT_MIN) / (AUTOSEQ_TEMPO_TOP - AUTOSEQ_TEMPO_LOW);
+var AUTOSEQ_C = AUTOSEQ_AT_MIN - AUTOSEQ_K * AUTOSEQ_TEMPO_LOW;
+var AUTOSEEK_AT_MIN = 25;
+var AUTOSEEK_AT_MAX = 15;
+var AUTOSEEK_K = (AUTOSEEK_AT_MAX - AUTOSEEK_AT_MIN) / (AUTOSEQ_TEMPO_TOP - AUTOSEQ_TEMPO_LOW);
+var AUTOSEEK_C = AUTOSEEK_AT_MIN - AUTOSEEK_K * AUTOSEQ_TEMPO_LOW;
+/**
+* Time-stretch processor for tempo adjustment without affecting pitch.
+* Used internally by SoundTouch for time-stretching audio.
+*/
+var Stretch = class Stretch extends AbstractFifoSamplePipe {
+	_quickSeek;
+	midBufferDirty;
+	midBuffer;
+	refMidBuffer;
+	overlapLength;
+	autoSeqSetting;
+	autoSeekSetting;
+	_tempo;
+	sampleRate;
+	overlapMs;
+	sequenceMs;
+	seekWindowMs;
+	seekWindowLength;
+	seekLength;
+	nominalSkip;
+	skipFract;
+	sampleReq;
+	/**
+	* Creates a Stretch instance.
+	* @param createBuffers - Whether to allocate internal buffers
+	*/
+	constructor(createBuffers) {
+		super(createBuffers);
+		this._quickSeek = true;
+		this.midBufferDirty = true;
+		this.midBuffer = null;
+		this.overlapLength = 0;
+		this.autoSeqSetting = true;
+		this.autoSeekSetting = true;
+		this._tempo = 1;
+		this.setParameters(44100, DEFAULT_SEQUENCE_MS, DEFAULT_SEEKWINDOW_MS, DEFAULT_OVERLAP_MS);
+	}
+	clear() {
+		super.clear();
+		this.clearMidBuffer();
+	}
+	clearMidBuffer() {
+		this.midBufferDirty = true;
+		if (this.midBuffer) this.midBuffer.fill(0);
+		if (this.refMidBuffer) this.refMidBuffer.fill(0);
+		this.skipFract = 0;
+	}
+	setParameters(sampleRate, sequenceMs, seekWindowMs, overlapMs) {
+		if (sampleRate > 0) this.sampleRate = sampleRate;
+		if (overlapMs > 0) this.overlapMs = overlapMs;
+		if (sequenceMs > 0) {
+			this.sequenceMs = sequenceMs;
+			this.autoSeqSetting = false;
+		} else this.autoSeqSetting = true;
+		if (seekWindowMs > 0) {
+			this.seekWindowMs = seekWindowMs;
+			this.autoSeekSetting = false;
+		} else this.autoSeekSetting = true;
+		this.calculateSequenceParameters();
+		this.calculateOverlapLength(this.overlapMs);
+		this.tempo = this._tempo;
+	}
+	set tempo(newTempo) {
+		this._tempo = newTempo;
+		this.calculateSequenceParameters();
+		this.nominalSkip = this._tempo * (this.seekWindowLength - this.overlapLength);
+		this.skipFract = 0;
+		const intskip = Math.floor(this.nominalSkip + .5);
+		this.sampleReq = Math.max(intskip + this.overlapLength, this.seekWindowLength) + this.seekLength;
+	}
+	get tempo() {
+		return this._tempo;
+	}
+	get inputChunkSize() {
+		return this.sampleReq;
+	}
+	get outputChunkSize() {
+		return this.overlapLength + Math.max(0, this.seekWindowLength - 2 * this.overlapLength);
+	}
+	calculateOverlapLength(overlapInMsec = 0) {
+		let newOvl = this.sampleRate * overlapInMsec / 1e3;
+		newOvl = newOvl < 16 ? 16 : newOvl;
+		newOvl -= newOvl % 8;
+		if (newOvl === this.overlapLength && this.midBuffer !== null) return;
+		this.overlapLength = newOvl;
+		const needed = this.overlapLength * 2;
+		if (!this.refMidBuffer || this.refMidBuffer.length < needed) this.refMidBuffer = new Float32Array(needed);
+		if (!this.midBuffer || this.midBuffer.length < needed) this.midBuffer = new Float32Array(needed);
+	}
+	checkLimits(x, mi, ma) {
+		return x < mi ? mi : x > ma ? ma : x;
+	}
+	calculateSequenceParameters() {
+		if (this.autoSeqSetting) {
+			let seq = AUTOSEQ_C + AUTOSEQ_K * this._tempo;
+			seq = this.checkLimits(seq, AUTOSEQ_AT_MAX, AUTOSEQ_AT_MIN);
+			this.sequenceMs = Math.floor(seq + .5);
+		}
+		if (this.autoSeekSetting) {
+			let seek = AUTOSEEK_C + AUTOSEEK_K * this._tempo;
+			seek = this.checkLimits(seek, AUTOSEEK_AT_MAX, AUTOSEEK_AT_MIN);
+			this.seekWindowMs = Math.floor(seek + .5);
+		}
+		this.seekWindowLength = Math.floor(this.sampleRate * this.sequenceMs / 1e3);
+		this.seekLength = Math.floor(this.sampleRate * this.seekWindowMs / 1e3);
+	}
+	set quickSeek(enable) {
+		this._quickSeek = enable;
+	}
+	clone() {
+		const result = new Stretch();
+		result.tempo = this._tempo;
+		result.setParameters(this.sampleRate, this.sequenceMs, this.seekWindowMs, this.overlapMs);
+		return result;
+	}
+	seekBestOverlapPosition() {
+		return this._quickSeek ? this.seekBestOverlapPositionStereoQuick() : this.seekBestOverlapPositionStereo();
+	}
+	seekBestOverlapPositionStereo() {
+		let bestOffset;
+		let bestCorrelation;
+		let correlation;
+		this.preCalculateCorrelationReferenceStereo();
+		bestOffset = 0;
+		bestCorrelation = Number.MIN_VALUE;
+		for (let i = 0; i < this.seekLength; i++) {
+			correlation = this.calculateCrossCorrelationStereo(2 * i, this.refMidBuffer);
+			if (correlation > bestCorrelation) {
+				bestCorrelation = correlation;
+				bestOffset = i;
+			}
+		}
+		return bestOffset;
+	}
+	seekBestOverlapPositionStereoQuick() {
+		let bestOffset;
+		let bestCorrelation;
+		let correlation;
+		let correlationOffset;
+		let tempOffset;
+		this.preCalculateCorrelationReferenceStereo();
+		bestCorrelation = Number.MIN_VALUE;
+		bestOffset = 0;
+		correlationOffset = 0;
+		for (let scanCount = 0; scanCount < 4; scanCount++) {
+			let j = 0;
+			while (_SCAN_OFFSETS[scanCount][j]) {
+				tempOffset = correlationOffset + _SCAN_OFFSETS[scanCount][j];
+				if (tempOffset >= this.seekLength) break;
+				correlation = this.calculateCrossCorrelationStereo(2 * tempOffset, this.refMidBuffer);
+				if (correlation > bestCorrelation) {
+					bestCorrelation = correlation;
+					bestOffset = tempOffset;
+				}
+				j++;
+			}
+			correlationOffset = bestOffset;
+		}
+		return bestOffset;
+	}
+	preCalculateCorrelationReferenceStereo() {
+		for (let i = 0; i < this.overlapLength; i++) {
+			const temp = i * (this.overlapLength - i);
+			const ctx = i * 2;
+			this.refMidBuffer[ctx] = this.midBuffer[ctx] * temp;
+			this.refMidBuffer[ctx + 1] = this.midBuffer[ctx + 1] * temp;
+		}
+	}
+	calculateCrossCorrelationStereo(mixingPos, compare) {
+		const mixing = this._inputBuffer.vector;
+		mixingPos += this._inputBuffer.startIndex;
+		let correlation = 0;
+		const calcLength = 2 * this.overlapLength;
+		for (let i = 2; i < calcLength; i += 2) {
+			const mixingOffset = i + mixingPos;
+			correlation += mixing[mixingOffset] * compare[i] + mixing[mixingOffset + 1] * compare[i + 1];
+		}
+		return correlation;
+	}
+	overlap(overlapPosition) {
+		this.overlapStereo(2 * overlapPosition);
+	}
+	overlapStereo(inputPosition) {
+		const input = this._inputBuffer.vector;
+		inputPosition += this._inputBuffer.startIndex;
+		const output = this._outputBuffer.vector;
+		const outputPosition = this._outputBuffer.endIndex;
+		const frameScale = 1 / this.overlapLength;
+		for (let i = 0; i < this.overlapLength; i++) {
+			const tempFrame = (this.overlapLength - i) * frameScale;
+			const fi = i * frameScale;
+			const ctx = 2 * i;
+			const inputOffset = ctx + inputPosition;
+			const outputOffset = ctx + outputPosition;
+			output[outputOffset] = input[inputOffset] * fi + this.midBuffer[ctx] * tempFrame;
+			output[outputOffset + 1] = input[inputOffset + 1] * fi + this.midBuffer[ctx + 1] * tempFrame;
+		}
+	}
+	process() {
+		if (this.midBufferDirty) {
+			if (this._inputBuffer.frameCount < this.overlapLength) return;
+			const needed = this.overlapLength * 2;
+			if (!this.midBuffer || this.midBuffer.length < needed) this.midBuffer = new Float32Array(needed);
+			this._inputBuffer.receiveSamples(this.midBuffer, this.overlapLength);
+			this.midBufferDirty = false;
+		}
+		while (this._inputBuffer.frameCount >= this.sampleReq) {
+			const offset = this.seekBestOverlapPosition();
+			this._outputBuffer.ensureAdditionalCapacity(this.overlapLength);
+			this.overlap(Math.floor(offset));
+			this._outputBuffer.put(this.overlapLength);
+			const temp = this.seekWindowLength - 2 * this.overlapLength;
+			if (temp > 0) this._outputBuffer.putBuffer(this._inputBuffer, offset + this.overlapLength, temp);
+			const start = this._inputBuffer.startIndex + 2 * (offset + this.seekWindowLength - this.overlapLength);
+			this.midBuffer.set(this._inputBuffer.vector.subarray(start, start + 2 * this.overlapLength));
+			this.skipFract += this.nominalSkip;
+			const overlapSkip = Math.floor(this.skipFract);
+			this.skipFract -= overlapSkip;
+			this._inputBuffer.receive(overlapSkip);
+		}
+	}
+};
+//#endregion
+//#region ../core/src/testFloatEqual.ts
+function testFloatEqual(a, b) {
+	return (a > b ? a - b : b - a) > 1e-10;
+}
+//#endregion
+//#region ../core/src/SoundTouch.ts
+/**
+* Main processing engine for pitch shifting, tempo adjustment, and rate transposition.
+* Set pitch, tempo, rate, or pitchSemitones for real-time audio manipulation.
+*/
+var SoundTouch = class SoundTouch {
+	transposer;
+	stretch;
+	_inputBuffer;
+	_intermediateBuffer;
+	_outputBuffer;
+	_rate;
+	_tempo;
+	virtualPitch;
+	virtualRate;
+	virtualTempo;
+	/**
+	* Creates a new SoundTouch processor instance.
+	*/
+	constructor() {
+		this.transposer = new RateTransposer(false);
+		this.stretch = new Stretch(false);
+		this._inputBuffer = new FifoSampleBuffer();
+		this._intermediateBuffer = new FifoSampleBuffer();
+		this._outputBuffer = new FifoSampleBuffer();
+		this._rate = 0;
+		this._tempo = 0;
+		this.virtualPitch = 1;
+		this.virtualRate = 1;
+		this.virtualTempo = 1;
+		this.calculateEffectiveRateAndTempo();
+	}
+	clear() {
+		this.transposer.clear();
+		this.stretch.clear();
+	}
+	clone() {
+		const result = new SoundTouch();
+		result.rate = this.rate;
+		result.tempo = this.tempo;
+		return result;
+	}
+	get rate() {
+		return this._rate;
+	}
+	set rate(rate) {
+		this.virtualRate = rate;
+		this.calculateEffectiveRateAndTempo();
+	}
+	set rateChange(rateChange) {
+		this._rate = 1 + .01 * rateChange;
+	}
+	get tempo() {
+		return this._tempo;
+	}
+	set tempo(tempo) {
+		this.virtualTempo = tempo;
+		this.calculateEffectiveRateAndTempo();
+	}
+	set tempoChange(tempoChange) {
+		this.tempo = 1 + .01 * tempoChange;
+	}
+	set pitch(pitch) {
+		this.virtualPitch = pitch;
+		this.calculateEffectiveRateAndTempo();
+	}
+	set pitchOctaves(pitchOctaves) {
+		this.pitch = Math.exp(.69314718056 * pitchOctaves);
+		this.calculateEffectiveRateAndTempo();
+	}
+	set pitchSemitones(pitchSemitones) {
+		this.pitchOctaves = pitchSemitones / 12;
+	}
+	get inputBuffer() {
+		return this._inputBuffer;
+	}
+	get outputBuffer() {
+		return this._outputBuffer;
+	}
+	calculateEffectiveRateAndTempo() {
+		const previousTempo = this._tempo;
+		const previousRate = this._rate;
+		this._tempo = this.virtualTempo / this.virtualPitch;
+		this._rate = this.virtualRate * this.virtualPitch;
+		if (testFloatEqual(this._tempo, previousTempo)) this.stretch.tempo = this._tempo;
+		if (testFloatEqual(this._rate, previousRate)) this.transposer.rate = this._rate;
+		if (this._rate > 1) {
+			if (this._outputBuffer !== this.transposer.outputBuffer) {
+				this.stretch.inputBuffer = this._inputBuffer;
+				this.stretch.outputBuffer = this._intermediateBuffer;
+				this.transposer.inputBuffer = this._intermediateBuffer;
+				this.transposer.outputBuffer = this._outputBuffer;
+			}
+		} else if (this._outputBuffer !== this.stretch.outputBuffer) {
+			this.transposer.inputBuffer = this._inputBuffer;
+			this.transposer.outputBuffer = this._intermediateBuffer;
+			this.stretch.inputBuffer = this._intermediateBuffer;
+			this.stretch.outputBuffer = this._outputBuffer;
+		}
+	}
+	process() {
+		if (this._rate > 1) {
+			this.stretch.process();
+			this.transposer.process();
+		} else {
+			this.transposer.process();
+			this.stretch.process();
+		}
+	}
+};
+//#endregion
+
+// ══════════════════════════════════════════════════════════════════════════════
+// App state
+// ══════════════════════════════════════════════════════════════════════════════
+let library     = {};
+let currentSong = null;
+
+let instrBuffer = null;
+let vocalBuffer = null;
+let instrReady  = null;
+let vocalReady  = null;
+let lastProcessedTempo = null;
+let lastProcessedPitch = null;
+
+let instrNode    = null;
+let vocalNode    = null;
+let vocalGainNode   = null;
+let masterFadeNode  = null;
+
+let isPlaying    = false;
+let startCtxTime = 0;
+let startOffset  = 0;
+let isScrubbing  = false;
+let animFrame    = null;
+
+let vocalLevel    = 100;
+let tempoRatio    = 1.0;
+let pitchSemitones = 0;
+
+let regionInFrac  = 0;   // 0.0 – 1.0
+let regionOutFrac = 1;   // 0.0 – 1.0
+let loopRegion    = true;
+
+function regionIsActive() {
+    return regionInFrac > 0.001 || regionOutFrac < 0.999;
+}
+
+// Returns where playback should start for a loop cycle.
+// Applies 2s pre-roll only when the IN marker is more than 2s into the song.
+function preRollStart(inTime) {
+    return inTime > 2 ? inTime - 2 : inTime;
+}
+
+let audioCtx = null;
+
+// ══════════════════════════════════════════════════════════════════════════════
+// AudioContext init — no worklet needed
+// ══════════════════════════════════════════════════════════════════════════════
+async function initAudioContext() {
+    if (audioCtx) {
+        if (audioCtx.state === 'suspended') await audioCtx.resume();
+        return;
+    }
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // Master fade node sits between everything and the speakers
+    masterFadeNode = audioCtx.createGain();
+    masterFadeNode.gain.value = 1;
+    masterFadeNode.connect(audioCtx.destination);
+    // Vocal volume rides on top of the master fade
+    vocalGainNode = audioCtx.createGain();
+    vocalGainNode.gain.value = vocalLevel / 100;
+    vocalGainNode.connect(masterFadeNode);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Manifest loading — fetches songs.json from the same folder as this HTML file
+// ══════════════════════════════════════════════════════════════════════════════
+async function loadManifest() {
+    const statusEl = document.getElementById('manifestStatus');
+    const titleEl  = document.getElementById('showTitle');
+    try {
+        const resp = await fetch('songs.json');
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+
+        // Support both a plain array and { showTitle, songs: [...] }
+        const songs     = Array.isArray(data) ? data : (data.songs || []);
+        const showTitle = !Array.isArray(data) && data.showTitle ? data.showTitle : null;
+
+        if (showTitle && titleEl) titleEl.textContent = showTitle;
+
+        songs.forEach(song => {
+            library[song.title] = { vocal: song.vocal, instr: song.instr };
+        });
+
+        if (statusEl) statusEl.textContent = songs.length + ' song' + (songs.length === 1 ? '' : 's');
+        renderSongList();
+    } catch(err) {
+        console.error('Manifest load error:', err);
+        if (statusEl) {
+            statusEl.textContent = 'Could not load songs.json';
+            statusEl.classList.add('manifest-error');
+        }
+        const emptyEl = document.getElementById('emptyList');
+        if (emptyEl) emptyEl.innerHTML = 'No songs loaded.<br><br>Place a <em>songs.json</em> file in the same folder as this HTML file.';
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Song list
+// ══════════════════════════════════════════════════════════════════════════════
+function renderSongList() {
+    const list = document.getElementById('songList');
+    const pairs = Object.keys(library)
+        .filter(n => library[n].vocal && library[n].instr)
+        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+
+    if (pairs.length === 0) {
+        list.innerHTML = '<div class="empty-list">No matching pairs found.<br><br>Files must be named:<br><em>Song - Vocals.mp3<br>Song - Instrumental.mp3</em></div>';
+        return;
+    }
+    list.innerHTML = '';
+    pairs.forEach(name => {
+        const div = document.createElement('div');
+        div.className = 'song-item' + (name === currentSong ? ' active' : '');
+        div.textContent = name;
+        div.title = name;
+        div.addEventListener('click', () => selectSong(name));
+        list.appendChild(div);
+    });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Select & decode a song
+// ══════════════════════════════════════════════════════════════════════════════
+async function selectSong(name) {
+    if (name === currentSong) return;
+    closeSidebar();
+    stopNodes();
+    isPlaying = false;
+    startOffset = 0;
+    currentSong = name;
+
+    document.querySelectorAll('.song-item').forEach(el => {
+        el.classList.toggle('active', el.textContent === name);
+    });
+
+    renderPlayer();
+    setStatus('Loading...');
+    setPlayEnabled(false);
+
+    try {
+        await initAudioContext();
+
+        const [instrResp, vocalResp] = await Promise.all([
+            fetch(library[name].instr),
+            fetch(library[name].vocal)
+        ]);
+        if (!instrResp.ok) throw new Error('Could not load instrumental: ' + instrResp.status);
+        if (!vocalResp.ok) throw new Error('Could not load vocal: ' + vocalResp.status);
+        const [instrArr, vocalArr] = await Promise.all([
+            instrResp.arrayBuffer(),
+            vocalResp.arrayBuffer()
+        ]);
+
+        [instrBuffer, vocalBuffer] = await Promise.all([
+            audioCtx.decodeAudioData(instrArr),
+            audioCtx.decodeAudioData(vocalArr)
+        ]);
+
+        instrReady = null;
+        vocalReady = null;
+        lastProcessedTempo = null;
+        lastProcessedPitch = null;
+
+        setStatus('');
+        setPlayEnabled(true);
+        updateDurationDisplay(instrBuffer.duration);
+        updateProgressUI(0);
+
+    } catch(err) {
+        setStatus('Error loading file.');
+        console.error('Load error:', err);
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SoundTouch processing — runs in main thread, no AudioWorklet needed
+// ══════════════════════════════════════════════════════════════════════════════
+async function processBuffersIfNeeded() {
+    if (tempoRatio === lastProcessedTempo && pitchSemitones === lastProcessedPitch && instrReady && vocalReady) return;
+
+    if (tempoRatio === 1.0 && pitchSemitones === 0) {
+        instrReady = instrBuffer;
+        vocalReady = vocalBuffer;
+        lastProcessedTempo = 1.0;
+        lastProcessedPitch = 0;
+        return;
+    }
+
+    setStatus('Processing...');
+    try {
+        // Process sequentially to avoid memory spike on large files
+        instrReady = await processOneBuffer(instrBuffer, tempoRatio, pitchSemitones);
+        vocalReady = await processOneBuffer(vocalBuffer, tempoRatio, pitchSemitones);
+        lastProcessedTempo = tempoRatio;
+        lastProcessedPitch = pitchSemitones;
+        setStatus('');
+    } catch(err) {
+        setStatus('Processing error.');
+        console.error('Process error:', err);
+        throw err;
+    }
+}
+
+async function processOneBuffer(buffer, ratio, semitones) {
+    const sr = buffer.sampleRate;
+    const numFrames = buffer.length;
+
+    // Get stereo channel data
+    const left  = buffer.getChannelData(0);
+    const right = buffer.numberOfChannels > 1 ? buffer.getChannelData(1) : buffer.getChannelData(0);
+
+    // Create SoundTouch instance
+    const st = new SoundTouch();
+    st.tempo = ratio;
+    if (semitones !== 0) st.pitchSemitones = semitones;
+
+    // Process in chunks so the browser stays responsive
+    const CHUNK = 8192;
+    const outputChunks = [];
+    let inputPos = 0;
+
+    while (inputPos < numFrames) {
+        const count = Math.min(CHUNK, numFrames - inputPos);
+
+        // Interleave L/R into SoundTouch input buffer
+        const samples = new Float32Array(count * 2);
+        for (let i = 0; i < count; i++) {
+            samples[i * 2]     = left[inputPos + i];
+            samples[i * 2 + 1] = right[inputPos + i];
+        }
+        st.inputBuffer.putSamples(samples, 0, count);
+        st.process();
+
+        const avail = st.outputBuffer.frameCount;
+        if (avail > 0) {
+            const out = new Float32Array(avail * 2);
+            st.outputBuffer.receiveSamples(out, avail);
+            outputChunks.push(out);
+        }
+
+        inputPos += count;
+
+        // Yield to UI thread every ~10 chunks
+        if ((inputPos / CHUNK) % 10 === 0) {
+            await new Promise(r => setTimeout(r, 0));
+        }
+    }
+
+    // Flush SoundTouch's internal buffers
+    for (let flush = 0; flush < 5; flush++) {
+        st.process();
+        const avail = st.outputBuffer.frameCount;
+        if (avail > 0) {
+            const out = new Float32Array(avail * 2);
+            st.outputBuffer.receiveSamples(out, avail);
+            outputChunks.push(out);
+        } else break;
+    }
+
+    // Assemble output AudioBuffer
+    const totalFrames = outputChunks.reduce((sum, c) => sum + c.length / 2, 0);
+    const outBuf = audioCtx.createBuffer(2, Math.ceil(totalFrames), sr);
+    const outL = new Float32Array(Math.ceil(totalFrames));
+    const outR = new Float32Array(Math.ceil(totalFrames));
+
+    let offset = 0;
+    for (const chunk of outputChunks) {
+        const frames = chunk.length / 2;
+        for (let i = 0; i < frames; i++) {
+            outL[offset + i] = chunk[i * 2];
+            outR[offset + i] = chunk[i * 2 + 1];
+        }
+        offset += frames;
+    }
+    outBuf.copyToChannel(outL, 0);
+    outBuf.copyToChannel(outR, 1);
+
+    return outBuf;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Playback
+// ══════════════════════════════════════════════════════════════════════════════
+async function startPlayback() {
+    if (!instrBuffer) return;
+    await initAudioContext();
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+    setPlayEnabled(false);
+    await processBuffersIfNeeded();
+    setPlayEnabled(true);
+
+    // If region is active, keep start within the region (applying pre-roll if eligible)
+    if (regionIsActive() && instrBuffer) {
+        const inTime  = regionInFrac  * instrBuffer.duration;
+        const outTime = regionOutFrac * instrBuffer.duration;
+        if (startOffset < inTime || startOffset >= outTime) {
+            startOffset = preRollStart(inTime);
+        }
+    }
+
+    const processedOffset = startOffset / tempoRatio;
+
+    instrNode = audioCtx.createBufferSource();
+    vocalNode = audioCtx.createBufferSource();
+    instrNode.buffer = instrReady;
+    vocalNode.buffer = vocalReady;
+
+    instrNode.connect(masterFadeNode);   // instr → master fade → destination
+    vocalNode.connect(vocalGainNode);    // vocal → vocal gain → master fade → destination
+
+    // Schedule fade-in if we started before the region IN point (pre-roll)
+    const inTime = regionIsActive() ? regionInFrac * instrBuffer.duration : -1;
+    masterFadeNode.gain.cancelScheduledValues(audioCtx.currentTime);
+    if (regionIsActive() && loopRegion && startOffset < inTime - 0.05) {
+        const fadeDuration = inTime - startOffset;
+        masterFadeNode.gain.setValueAtTime(0, audioCtx.currentTime);
+        masterFadeNode.gain.linearRampToValueAtTime(1, audioCtx.currentTime + fadeDuration);
+    } else {
+        masterFadeNode.gain.setValueAtTime(1, audioCtx.currentTime);
+    }
+
+    instrNode.start(0, processedOffset);
+    vocalNode.start(0, processedOffset);
+
+    instrNode.onended = onTrackEnded;
+
+    startCtxTime = audioCtx.currentTime;
+    isPlaying = true;
+    setPlayButton(true);
+    setTransportLocked(true);
+    tickProgress();
+}
+
+function pausePlayback() {
+    startOffset = getCurrentOriginalTime();
+    stopNodes();
+    isPlaying = false;
+    setPlayButton(false);
+    setTransportLocked(false);
+}
+
+function stopAndRewind() {
+    stopNodes();
+    isPlaying = false;
+    const rewindFrac = (regionIsActive() && instrBuffer) ? regionInFrac : 0;
+    startOffset = rewindFrac * (instrBuffer ? instrBuffer.duration : 0);
+    setPlayButton(false);
+    setTransportLocked(false);
+    updateProgressUI(rewindFrac);
+}
+
+function stopNodes() {
+    cancelAnimationFrame(animFrame);
+    if (instrNode) { instrNode.onended = null; try { instrNode.stop(); } catch(e) {} try { instrNode.disconnect(); } catch(e) {} instrNode = null; }
+    if (vocalNode) { vocalNode.onended = null; try { vocalNode.stop(); } catch(e) {} try { vocalNode.disconnect(); } catch(e) {} vocalNode = null; }
+}
+
+function onTrackEnded() {
+    if (!isPlaying) return;
+    stopNodes();
+    isPlaying = false;
+    startOffset = 0;
+    setPlayButton(false);
+    setTransportLocked(false);
+    updateProgressUI(0);
+}
+
+function togglePlay() {
+    isPlaying ? pausePlayback() : startPlayback();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Time tracking
+// ══════════════════════════════════════════════════════════════════════════════
+function getCurrentOriginalTime() {
+    if (!isPlaying) return startOffset;
+    return startOffset + (audioCtx.currentTime - startCtxTime) * tempoRatio;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Scrubbing
+// ══════════════════════════════════════════════════════════════════════════════
+function onScrubInput(e) {
+    const frac = parseFloat(e.target.value) / 1000;
+    const cur  = document.getElementById('timeCurrent');
+    if (cur && instrBuffer) cur.textContent = formatTime(frac * instrBuffer.duration);
+    updateScrubFill();
+}
+
+function onScrubRelease(e) {
+    isScrubbing = false;
+    seekToFraction(parseFloat(e.target.value) / 1000);
+}
+
+async function seekToFraction(frac) {
+    if (!instrBuffer) return;
+    const wasPlaying = isPlaying;
+    stopNodes();
+    isPlaying = false;
+    startOffset = frac * instrBuffer.duration;
+    if (wasPlaying) {
+        await startPlayback();
+    } else {
+        updateProgressUI(frac);
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Progress animation
+// ══════════════════════════════════════════════════════════════════════════════
+function tickProgress() {
+    if (!isPlaying) return;
+    if (!isScrubbing && instrBuffer) {
+        const currentTime = getCurrentOriginalTime();
+        const duration    = instrBuffer.duration;
+
+        // Region end: loop back to IN (with pre-roll), or stop and rewind
+        if (regionIsActive() && currentTime >= regionOutFrac * duration) {
+            stopNodes();
+            isPlaying = false;
+            const inTime = regionInFrac * duration;
+            startOffset = loopRegion ? preRollStart(inTime) : inTime;
+            setPlayButton(false);
+            setTransportLocked(false);
+            if (loopRegion) {
+                startPlayback();
+            } else {
+                updateProgressUI(regionInFrac);
+            }
+            return;
+        }
+
+        const frac = Math.min(1, currentTime / duration);
+        updateProgressUI(frac);
+    }
+    animFrame = requestAnimationFrame(tickProgress);
+}
+
+function updateProgressUI(frac) {
+    const scrub = document.getElementById('scrubBar');
+    const cur   = document.getElementById('timeCurrent');
+    if (!scrub || !cur || !instrBuffer) return;
+    scrub.value = frac * 1000;
+    cur.textContent = formatTime(frac * instrBuffer.duration);
+    updateScrubFill();
+}
+
+function updateDurationDisplay(dur) {
+    const el = document.getElementById('timeTotal');
+    if (el) el.textContent = formatTime(dur || 0);
+    updateRegionDisplay(); // refresh OUT label now we know duration
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Vocal volume
+// ══════════════════════════════════════════════════════════════════════════════
+function onVocalSlider(e) {
+    vocalLevel = parseFloat(e.target.value);
+    document.getElementById('vocalValue').textContent = vocalLevel + '%';
+    if (vocalGainNode) vocalGainNode.gain.value = vocalLevel / 100;
+    updateVocalFill();
+    updatePresetButtons();
+}
+
+function setVocalPreset(level) {
+    vocalLevel = level;
+    const s = document.getElementById('vocalSlider');
+    const v = document.getElementById('vocalValue');
+    if (s) s.value = level;
+    if (v) v.textContent = level + '%';
+    if (vocalGainNode) vocalGainNode.gain.value = level / 100;
+    updateVocalFill();
+    updatePresetButtons();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Tempo
+// ══════════════════════════════════════════════════════════════════════════════
+function onTempoSlider(e) {
+    tempoRatio = parseFloat(e.target.value) / 100;
+    document.getElementById('tempoValue').textContent = Math.round(tempoRatio * 100) + '%';
+    updateTempoFill();
+    updatePresetButtons();
+    // If playing, restart from current position with new tempo
+    if (isPlaying) {
+        const t = getCurrentOriginalTime();
+        stopNodes();
+        isPlaying = false;
+        startOffset = t;
+        lastProcessedTempo = null; // force reprocessing
+        startPlayback();
+    }
+}
+
+function setTempoPreset(pct) {
+    tempoRatio = pct / 100;
+    const s = document.getElementById('tempoSlider');
+    const v = document.getElementById('tempoValue');
+    if (s) s.value = pct;
+    if (v) v.textContent = pct + '%';
+    updateTempoFill();
+    updatePresetButtons();
+    if (isPlaying) {
+        const t = getCurrentOriginalTime();
+        stopNodes();
+        isPlaying = false;
+        startOffset = t;
+        lastProcessedTempo = null;
+        startPlayback();
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Loop Region
+// ══════════════════════════════════════════════════════════════════════════════
+function onRegionInSlider(e) {
+    let val = parseInt(e.target.value, 10);
+    const outVal = parseInt(document.getElementById('regionOut').value, 10);
+    if (val >= outVal - 10) { val = outVal - 10; e.target.value = val; }
+    regionInFrac = val / 1000;
+    updateRegionFill();
+    updateRegionDisplay();
+}
+
+function onRegionOutSlider(e) {
+    let val = parseInt(e.target.value, 10);
+    const inVal = parseInt(document.getElementById('regionIn').value, 10);
+    if (val <= inVal + 10) { val = inVal + 10; e.target.value = val; }
+    regionOutFrac = val / 1000;
+    updateRegionFill();
+    updateRegionDisplay();
+}
+
+function clearRegion() {
+    regionInFrac  = 0;
+    regionOutFrac = 1;
+    const inEl  = document.getElementById('regionIn');
+    const outEl = document.getElementById('regionOut');
+    if (inEl)  { inEl.value  = 0;    }
+    if (outEl) { outEl.value = 1000; }
+    updateRegionFill();
+    updateRegionDisplay();
+    // If playing, revert to normal (no loop)
+    // no need to interrupt playback — loop check in tickProgress handles it
+}
+
+function updateRegionFill() {
+    const inEl  = document.getElementById('regionIn');
+    const outEl = document.getElementById('regionOut');
+    if (inEl) {
+        const pct = (regionInFrac * 100).toFixed(1);
+        inEl.style.background = `linear-gradient(to right, #1a5c3a ${pct}%, #333 ${pct}%)`;
+    }
+    if (outEl) {
+        const pct = (regionOutFrac * 100).toFixed(1);
+        outEl.style.background = `linear-gradient(to right, #5c1a1a ${pct}%, #333 ${pct}%)`;
+    }
+}
+
+function updateRegionDisplay() {
+    const inEl  = document.getElementById('regionInTime');
+    const outEl = document.getElementById('regionOutTime');
+    const lbl   = document.getElementById('regionLabel');
+    if (!inEl || !outEl) return;
+
+    const duration = instrBuffer ? instrBuffer.duration : 0;
+    inEl.textContent  = formatTime(regionInFrac  * duration);
+    outEl.textContent = formatTime(regionOutFrac * duration);
+
+    const active = regionIsActive();
+    inEl.classList.toggle('dim',  regionInFrac  < 0.001);
+    outEl.classList.toggle('dim', regionOutFrac > 0.999);
+    if (lbl) {
+        lbl.textContent = active ? '◁  LOOP REGION  ▷' : '── FULL TRACK ──';
+        lbl.classList.toggle('active', active);
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Key / Pitch
+// ══════════════════════════════════════════════════════════════════════════════
+function onPitchSlider(e) {
+    pitchSemitones = parseInt(e.target.value, 10);
+    const sign = pitchSemitones > 0 ? '+' : '';
+    document.getElementById('pitchValue').textContent = sign + pitchSemitones;
+    updatePitchFill();
+    updatePresetButtons();
+    if (isPlaying) {
+        const t = getCurrentOriginalTime();
+        stopNodes();
+        isPlaying = false;
+        startOffset = t;
+        startPlayback();
+    }
+}
+
+function setPitchPreset(semi) {
+    pitchSemitones = semi;
+    const s = document.getElementById('pitchSlider');
+    const v = document.getElementById('pitchValue');
+    if (s) s.value = semi;
+    const sign = semi > 0 ? '+' : '';
+    if (v) v.textContent = sign + semi;
+    updatePitchFill();
+    updatePresetButtons();
+    if (isPlaying) {
+        const t = getCurrentOriginalTime();
+        stopNodes();
+        isPlaying = false;
+        startOffset = t;
+        startPlayback();
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Render player UI
+// ══════════════════════════════════════════════════════════════════════════════
+function renderPlayer() {
+    const player = document.getElementById('player');
+    const tempoVal = Math.round(tempoRatio * 100);
+    const pitchSign = pitchSemitones > 0 ? '+' : '';
+    player.innerHTML = `
+        <div class="status-bar" id="statusBar"></div>
+        <div class="song-title">${currentSong}</div>
+
+        <div class="scrub-section">
+            <div class="time-row">
+                <span id="timeCurrent">0:00</span>
+                <span id="timeTotal">—:——</span>
+            </div>
+            <input type="range" id="scrubBar" min="0" max="1000" step="1" value="0">
+
+            <div class="region-section">
+                <div class="region-row">
+                    <span class="region-row-label" style="color:#34d399">Start</span>
+                    <input type="range" id="regionIn" min="0" max="1000" step="1" value="${Math.round(regionInFrac * 1000)}">
+                    <span class="region-time-val" id="regionInTime">0:00</span>
+                </div>
+                <div class="region-row">
+                    <span class="region-row-label" style="color:#f87171">End</span>
+                    <input type="range" id="regionOut" min="0" max="1000" step="1" value="${Math.round(regionOutFrac * 1000)}">
+                    <span class="region-time-val" id="regionOutTime">—:——</span>
+                </div>
+                <div class="region-footer">
+                    <span class="region-label" id="regionLabel">── FULL TRACK ──</span>
+                    <button class="region-clear-btn" onclick="clearRegion()">✕ Clear</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="transport">
+            <button class="btn-stop" id="stopBtn" title="Stop & rewind">&#9632;</button>
+            <button class="btn-play" id="playBtn" disabled>&#9654;</button>
+            <button class="btn-loop${loopRegion ? ' loop-active' : ''}" id="loopBtn" title="Loop region">⟳</button>
+        </div>
+
+        <div class="controls-row">
+            <div class="control-section">
+                <div class="section-label">Vocal Guide Volume</div>
+                <div class="slider-row">
+                    <span class="slider-end-label">Off</span>
+                    <input type="range" id="vocalSlider" min="0" max="100" step="1" value="${vocalLevel}">
+                    <span class="slider-end-label right">Full</span>
+                    <span class="control-value" id="vocalValue">${vocalLevel}%</span>
+                </div>
+                <div class="preset-row">
+                    <button class="preset-btn" onclick="setVocalPreset(0)">Off</button>
+                    <button class="preset-btn" onclick="setVocalPreset(15)">Low</button>
+                    <button class="preset-btn" onclick="setVocalPreset(50)">Mid</button>
+                    <button class="preset-btn" onclick="setVocalPreset(100)">Full</button>
+                </div>
+            </div>
+            <div class="controls-divider"></div>
+            <div class="control-section" id="tempoSection">
+                <div class="section-label">Tempo</div>
+                <div class="slider-row">
+                    <span class="slider-end-label">75%</span>
+                    <input type="range" id="tempoSlider" min="75" max="125" step="1" value="${tempoVal}">
+                    <span class="slider-end-label right">125%</span>
+                    <span class="control-value" id="tempoValue">${tempoVal}%</span>
+                </div>
+                <div class="preset-row">
+                    <button class="preset-btn" onclick="setTempoPreset(90)">90%</button>
+                    <button class="preset-btn" onclick="setTempoPreset(95)">95%</button>
+                    <button class="preset-btn" onclick="setTempoPreset(100)">100%</button>
+                    <button class="preset-btn" onclick="setTempoPreset(105)">105%</button>
+                </div>
+            </div>
+            <div class="controls-divider"></div>
+            <div class="control-section" id="pitchSection">
+                <div class="section-label">Key (semitones)</div>
+                <div class="slider-row">
+                    <span class="slider-end-label">−5</span>
+                    <input type="range" id="pitchSlider" min="-5" max="5" step="1" value="${pitchSemitones}">
+                    <span class="slider-end-label right">+5</span>
+                    <span class="control-value" id="pitchValue">${pitchSign}${pitchSemitones}</span>
+                </div>
+                <div class="preset-row">
+                    <button class="preset-btn" onclick="setPitchPreset(-4)">−4</button>
+                    <button class="preset-btn" onclick="setPitchPreset(-2)">−2</button>
+                    <button class="preset-btn" onclick="setPitchPreset(0)">0</button>
+                    <button class="preset-btn" onclick="setPitchPreset(2)">+2</button>
+                    <button class="preset-btn" onclick="setPitchPreset(4)">+4</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const scrub = document.getElementById('scrubBar');
+    scrub.addEventListener('mousedown',  () => { isScrubbing = true; });
+    scrub.addEventListener('touchstart', () => { isScrubbing = true; });
+    scrub.addEventListener('input',      onScrubInput);
+    scrub.addEventListener('mouseup',    onScrubRelease);
+    scrub.addEventListener('touchend',   onScrubRelease);
+
+    document.getElementById('playBtn').addEventListener('click', togglePlay);
+    document.getElementById('stopBtn').addEventListener('click', stopAndRewind);
+    document.getElementById('loopBtn').addEventListener('click', toggleLoop);
+    document.getElementById('vocalSlider').addEventListener('input', onVocalSlider);
+    document.getElementById('tempoSlider').addEventListener('input', onTempoSlider);
+    document.getElementById('pitchSlider').addEventListener('input', onPitchSlider);
+    document.getElementById('regionIn').addEventListener('input', onRegionInSlider);
+    document.getElementById('regionOut').addEventListener('input', onRegionOutSlider);
+
+    updateScrubFill();
+    updateVocalFill();
+    updateTempoFill();
+    updatePitchFill();
+    updateRegionFill();
+    updateRegionDisplay();
+    updatePresetButtons();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// UI helpers
+// ══════════════════════════════════════════════════════════════════════════════
+function setPlayButton(playing) {
+    const btn = document.getElementById('playBtn');
+    if (btn) btn.innerHTML = playing ? '&#10074;&#10074;' : '&#9654;';
+}
+
+function setPlayEnabled(enabled) {
+    const btn = document.getElementById('playBtn');
+    if (btn) btn.disabled = !enabled;
+}
+
+function setStatus(msg) {
+    const el = document.getElementById('statusBar');
+    if (el) el.textContent = msg;
+}
+
+function toggleLoop() {
+    loopRegion = !loopRegion;
+    const btn = document.getElementById('loopBtn');
+    if (btn) btn.classList.toggle('loop-active', loopRegion);
+}
+
+function setTransportLocked(locked) {
+    ['tempoSection', 'pitchSection'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('locked', locked);
+    });
+}
+
+function updateScrubFill() {
+    const el = document.getElementById('scrubBar');
+    if (!el) return;
+    const pct = (parseFloat(el.value) / 1000 * 100).toFixed(1);
+    el.style.background = `linear-gradient(to right, #2c5f9e ${pct}%, #333 ${pct}%)`;
+}
+
+function updateVocalFill() {
+    const el = document.getElementById('vocalSlider');
+    if (!el) return;
+    el.style.background = `linear-gradient(to right, #e0932a ${vocalLevel}%, #333 ${vocalLevel}%)`;
+}
+
+function updateTempoFill() {
+    const el = document.getElementById('tempoSlider');
+    if (!el) return;
+    const pct = ((tempoRatio * 100 - 75) / 50 * 100).toFixed(1);
+    if (tempoRatio >= 1.0) {
+        el.style.background = `linear-gradient(to right, #333 50%, #2a7a76 50%, #4ecdc4 ${pct}%, #333 ${pct}%)`;
+    } else {
+        el.style.background = `linear-gradient(to right, #333 ${pct}%, #4ecdc4 ${pct}%, #2a7a76 50%, #333 50%)`;
+    }
+}
+
+function updatePitchFill() {
+    const el = document.getElementById('pitchSlider');
+    if (!el) return;
+    // Range is -5 to +5; center (0) maps to 50%
+    const pct = ((pitchSemitones + 5) / 10 * 100).toFixed(1);
+    if (pitchSemitones > 0) {
+        el.style.background = `linear-gradient(to right, #333 50%, #6d28d9 50%, #a78bfa ${pct}%, #333 ${pct}%)`;
+    } else if (pitchSemitones < 0) {
+        el.style.background = `linear-gradient(to right, #333 ${pct}%, #a78bfa ${pct}%, #6d28d9 50%, #333 50%)`;
+    } else {
+        el.style.background = `linear-gradient(to right, #333 50%, #333 50%)`;
+    }
+}
+
+function updatePresetButtons() {
+    const vPresets = { 'Off':0, 'Low':15, 'Mid':50, 'Full':100 };
+    const tPresets = { '90%':90, '95%':95, '100%':100, '105%':105 };
+    const pPresets = { '−4':-4, '−2':-2, '0':0, '+2':2, '+4':4 };
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.classList.remove('active-preset-vocal','active-preset-tempo','active-preset-pitch');
+        const txt = btn.textContent;
+        if (vPresets[txt] !== undefined && vPresets[txt] === vocalLevel)                  btn.classList.add('active-preset-vocal');
+        if (tPresets[txt] !== undefined && tPresets[txt] === Math.round(tempoRatio*100))  btn.classList.add('active-preset-tempo');
+        if (pPresets[txt] !== undefined && pPresets[txt] === pitchSemitones)              btn.classList.add('active-preset-pitch');
+    });
+}
+
+function formatTime(s) {
+    if (!s || isNaN(s)) return '0:00';
+    return Math.floor(s/60) + ':' + String(Math.floor(s%60)).padStart(2,'0');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Keyboard shortcuts
+// ══════════════════════════════════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+    if (!currentSong || !instrBuffer) return;
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === ' ')           { e.preventDefault(); togglePlay(); }
+    else if (e.key === 'ArrowLeft')  { e.preventDefault(); seekToFraction(Math.max(0, (getCurrentOriginalTime()-5)/instrBuffer.duration)); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); seekToFraction(Math.min(1, (getCurrentOriginalTime()+5)/instrBuffer.duration)); }
+    else if (e.key === 'Escape')     { stopAndRewind(); }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Mobile sidebar toggle
+// ══════════════════════════════════════════════════════════════════════════════
+function toggleSidebar() {
+    const sb = document.getElementById('sidebar');
+    const bd = document.getElementById('sidebarBackdrop');
+    if (!sb || !bd) return;
+    const isOpen = sb.classList.contains('open');
+    isOpen ? closeSidebar() : openSidebar();
+}
+function openSidebar() {
+    document.getElementById('sidebar')?.classList.add('open');
+    document.getElementById('sidebarBackdrop')?.classList.add('open');
+}
+function closeSidebar() {
+    document.getElementById('sidebar')?.classList.remove('open');
+    document.getElementById('sidebarBackdrop')?.classList.remove('open');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Online / offline indicator
+// ══════════════════════════════════════════════════════════════════════════════
+function updateNetworkBadge() {
+    const badge = document.getElementById('cacheBadge');
+    if (!badge) return;
+    if (!navigator.onLine) {
+        badge.textContent = 'Offline';
+        badge.className = 'cache-badge offline';
+    } else if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        badge.textContent = 'Cached';
+        badge.className = 'cache-badge cached';
+    } else {
+        badge.textContent = '';
+        badge.className = 'cache-badge';
+    }
+}
+window.addEventListener('online',  updateNetworkBadge);
+window.addEventListener('offline', updateNetworkBadge);
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Service Worker registration
+// ══════════════════════════════════════════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+        // When a new SW takes over, update the badge
+        reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'activated') updateNetworkBadge();
+            });
+        });
+        // If there's already a controller, mark as cached immediately
+        if (navigator.serviceWorker.controller) updateNetworkBadge();
+        // When controller changes (first activation), update badge
+        navigator.serviceWorker.addEventListener('controllerchange', updateNetworkBadge);
+    }).catch(err => console.warn('SW registration failed:', err));
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Boot — load the manifest as soon as the page is ready
+// ══════════════════════════════════════════════════════════════════════════════
+loadManifest();
+
+</script>
+</body>
+</html>

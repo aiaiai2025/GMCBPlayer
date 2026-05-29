@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stem Player 1.4</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif;
+            background: #1c1c1e;
+            color: #d0d0d0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ── Header ── */
+        header {
+            background: #111;
+            padding: 0 20px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #2c2c2e;
+            flex-shrink: 0;
+        }
+        header h1 {
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: #888;
+        }
+        header .version {
+            font-size: 11px;
+            color: #444;
+            letter-spacing: 1px;
+        }
+
+        /* ── Layout ── */
+        .app {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            width: 220px;
+            background: #161618;
+            border-right: 1px solid #2c2c2e;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .sidebar-top {
+            padding: 14px 12px;
+            border-bottom: 1px solid #2c2c2e;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .load-btn {
+            padding: 9px 12px;
+            background: #2c5f9e;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            width: 100%;
+            text-align: center;
+            transition: background 0.15s;
+        }
+        .load-btn:hover { background: #3a72b8; }
+        .load-btn:active { background: #244e88; }
+
+        .load-hint {
+            font-size: 11px;
+            color: #555;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        .song-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 6px 0;
+        }
+        .song-list::-webkit-scrollbar { width: 4px; }
+        .song-list::-webkit-scrollbar-track { background: transparent; }
+        .song-list::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+        .song-item {
+            padding: 11px 14px;
+            cursor: pointer;
+            font-size: 13px;
+            border-left: 3px solid transparent;
+            color: #aaa;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: background 0.1s, color 0.1s;
+            user-select: none;
+        }
+        .song-item:hover { background: #222; color: #ddd; }
+        .song-item.active {
+            background: #1a3a5c;
+            border-left-color: #2c5f9e;
+            color: #fff;
+        }
+        .song-item.loading-item {
+            color: #555;
+            font-style: italic;
+        }
+
+        .empty-list {
+            padding: 20px 14px;
+            color: #444;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        /* ── Player Area ── */
+        .player {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 32px 60px;
+            gap: 30px;
+        }
+
+        .idle-message {
+            color: #444;
+            font-size: 15px;
+            text-align: center;
+            line-height: 1.8;
+        }
+
+        /* Status overlay */
+        .status-bar {
+            font-size: 12px;
+            color: #888;
+            letter-spacing: 1px;
+            height: 16px;
+            text-align: center;
+        }
+
+        /* Song title */
+        .song-title {
+            font-size: 26px;
+            font-weight: 300;
+            color: #fff;
+            text-align: center;
+            letter-spacing: 0.3px;
+            max-width: 600px;
+        }
+
+        /* Scrub bar */
+        .scrub-section {
+            width: 100%;
+            max-width: 580px;
+        }
+        .time-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #555;
+            margin-bottom: 9px;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0.5px;
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 5px;
+            border-radius: 3px;
+            background: #333;
+            outline: none;
+            cursor: pointer;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:active { transform: scale(1.2); }
+
+        #scrubBar::-webkit-slider-thumb { background: #5a9ae0; }
+        #scrubBar { background: linear-gradient(to right, #2c5f9e 0%, #333 0%); }
+
+        /* Transport */
+        .transport {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .btn-stop {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #2c2c2e;
+            border: 1px solid #3a3a3c;
+            color: #aaa;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s;
+        }
+        .btn-stop:hover { background: #3a3a3c; color: #fff; }
+
+        .btn-play {
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            background: #2c5f9e;
+            border: none;
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s;
+            box-shadow: 0 4px 16px rgba(44, 95, 158, 0.4);
+        }
+        .btn-play:hover { background: #3a72b8; }
+        .btn-play:active { background: #244e88; }
+        .btn-play:disabled { background: #333; box-shadow: none; cursor: default; }
+
+        .btn-loop {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #2c2c2e;
+            border: 1px solid #3a3a3c;
+            color: #555;
+            font-size: 17px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
+        }
+        .btn-loop:hover { background: #3a3a3c; color: #aaa; }
+        .btn-loop.loop-active {
+            background: #0d2a1a;
+            border-color: #34d399;
+            color: #34d399;
+            box-shadow: 0 0 10px rgba(52, 211, 153, 0.25);
+        }
+
+        /* Controls row */
+        .controls-row {
+            display: flex;
+            gap: 32px;
+            align-items: flex-start;
+            justify-content: center;
+            width: 100%;
+            max-width: 920px;
+        }
+
+        /* Shared control section */
+        .control-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .section-label {
+            font-size: 10px;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: #555;
+        }
+
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+        .slider-end-label {
+            font-size: 10px;
+            color: #444;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            flex-shrink: 0;
+            width: 28px;
+        }
+        .slider-end-label.right { text-align: right; }
+
+        #vocalSlider::-webkit-slider-thumb { background: #e0932a; }
+        #vocalSlider { background: linear-gradient(to right, #e0932a 100%, #333 100%); }
+
+        #tempoSlider::-webkit-slider-thumb { background: #4ecdc4; }
+        #tempoSlider { background: linear-gradient(to right, #2a7a76 50%, #333 50%); }
+
+        #pitchSlider::-webkit-slider-thumb { background: #a78bfa; }
+        #pitchSlider { background: linear-gradient(to right, #333 50%, #6d28d9 50%); }
+
+        .control-value {
+            font-size: 12px;
+            color: #888;
+            width: 38px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            flex-shrink: 0;
+        }
+
+        /* Preset buttons */
+        .preset-row {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .preset-btn {
+            padding: 4px 9px;
+            border-radius: 12px;
+            border: 1px solid #333;
+            background: transparent;
+            color: #666;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .preset-btn:hover { border-color: #555; color: #aaa; }
+        .preset-btn.active-preset-vocal  { border-color: #e0932a; color: #e0932a; }
+        .preset-btn.active-preset-tempo  { border-color: #4ecdc4; color: #4ecdc4; }
+        .preset-btn.active-preset-pitch  { border-color: #a78bfa; color: #a78bfa; }
+
+        /* Locked state — tempo & pitch greyed out during playback */
+        .control-section.locked { opacity: 0.35; pointer-events: none; }
+        .control-section.locked .section-label::after {
+            content: ' — locked during playback';
+            font-size: 9px;
+            letter-spacing: 1px;
+            opacity: 0.7;
+        }
+
+        /* Divider between control sections */
+        .controls-divider {
+            width: 1px;
+            background: #2c2c2e;
+            align-self: stretch;
+            margin-top: 18px;
+        }
+
+        /* ── Loop Region — two separate rows, no overlay tricks ── */
+        .region-section {
+            width: 100%;
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .region-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .region-row-label {
+            font-size: 10px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            flex-shrink: 0;
+            width: 34px;
+        }
+
+        /* regionIn / regionOut inherit the shared input[type=range] base styles */
+        #regionIn, #regionOut { flex: 1; width: auto; }
+        #regionIn::-webkit-slider-thumb  { background: #34d399; }
+        #regionOut::-webkit-slider-thumb { background: #f87171; }
+
+        .region-time-val {
+            font-size: 10px;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0.5px;
+            flex-shrink: 0;
+            width: 34px;
+            text-align: right;
+        }
+        #regionInTime  { color: #34d399; }
+        #regionOutTime { color: #f87171; }
+        #regionInTime.dim, #regionOutTime.dim { color: #444; }
+
+        .region-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 1px;
+        }
+
+        .region-label {
+            color: #444;
+            font-size: 9px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            flex: 1;
+            text-align: center;
+        }
+        .region-label.active { color: #777; }
+
+        .region-clear-btn {
+            padding: 3px 9px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            background: transparent;
+            color: #555;
+            font-size: 9px;
+            cursor: pointer;
+            letter-spacing: 0.5px;
+            transition: all 0.15s;
+            flex-shrink: 0;
+        }
+        .region-clear-btn:hover { border-color: #666; color: #999; }
+
+        /* Hidden */
+        #fileInput { display: none; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Stem Player</h1>
+    <span class="version">v1.4</span>
+</header>
+
+<div class="app">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-top">
+            <input type="file" id="fileInput" multiple accept=".mp3,.wav,.m4a,.aiff,.ogg,.flac">
+            <button class="load-btn" onclick="openFilePicker()">+ Load Songs</button>
+            <div class="load-hint">Select your stems folder or individual files</div>
+        </div>
+        <div class="song-list" id="songList">
+            <div class="empty-list">Load your stems to get started.<br><br>Files should be named:<br><em>Song Name - Vocals.mp3<br>Song Name - Instrumental.mp3</em></div>
+        </div>
+    </div>
+
+    <!-- Player -->
+    <div class="player" id="player">
+        <div class="idle-message">Select a song from the list<br>to begin.</div>
+    </div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// SoundTouch core — runs in main thread (no AudioWorklet, works with file://)
+// ══════════════════════════════════════════════════════════════════════════════
+//#region ../core/src/FifoSampleBuffer.ts
+var BYTES_PER_SAMPLE = 4;
+var SAMPLES_PER_FRAME = 2;
+var BYTES_PER_FRAME = BYTES_PER_SAMPLE * SAMPLES_PER_FRAME;
+var DEFAULT_MAX_FRAMES = 131072;
+var FifoSampleBuffer = class {
+    _buffer;
+    _vector;
+    _position;
+    _frameCount;
+    constructor(maxFrames = DEFAULT_MAX_FRAMES) {
+        this._buffer = new ArrayBuffer(0, { maxByteLength: maxFrames * BYTES_PER_FRAME });
+        this._vector = new Float32Array(this._buffer);
+        this._position = 0;
+        this._frameCount = 0;
+    }
+    get vector() { return this._vector; }
+    get position() { return this._position; }
+    get startIndex() { return this._position * 2; }
+    get frameCount() { return this._frameCount; }
+    get endIndex() { return (this._position + this._frameCount) * 2; }
+    clear() { this._vector.fill(0); this._position = 0; this._frameCount = 0; }
+    put(numFrames) { this._frameCount += numFrames; }
+    putSamples(samples, position = 0, numFrames = 0) {
+        const sourceOffset = position * 2;
+        if (!(numFrames >= 0) || numFrames === 0) numFrames = (samples.length - sourceOffset) / 2;
+        const numSamples = numFrames * 2;
+        this.ensureCapacity(numFrames + this._frameCount);
+        const destOffset = this.endIndex;
+        this._vector.set(samples.subarray(sourceOffset, sourceOffset + numSamples), destOffset);
+        this._frameCount += numFrames;
+    }
+    putBuffer(buffer, position = 0, numFrames = 0) {
+        if (!(numFrames >= 0) || numFrames === 0) numFrames = buffer.frameCount - position;
+        this.putSamples(buffer.vector, buffer.position + position, numFrames);
+    }
+    receive(numFrames) {
+        if (numFrames === void 0 || !(numFrames >= 0) || numFrames > this._frameCount) numFrames = this._frameCount;
+        this._frameCount -= numFrames;
+        this._position += numFrames;
+    }
+    receiveSamples(output, numFrames = 0) {
+        const numSamples = numFrames * 2;
+        const sourceOffset = this.startIndex;
+        output.set(this._vector.subarray(sourceOffset, sourceOffset + numSamples));
+        this.receive(numFrames);
+    }
+    extract(output, position = 0, numFrames = 0) {
+        const sourceOffset = this.startIndex + position * 2;
+        const numSamples = numFrames * 2;
+        output.set(this._vector.subarray(sourceOffset, sourceOffset + numSamples));
+    }
+    ensureCapacity(numFrames = 0) {
+        const minLength = Math.floor(numFrames * SAMPLES_PER_FRAME);
+        if (this._vector.length < minLength) {
+            const newByteLength = minLength * BYTES_PER_SAMPLE;
+            if (newByteLength <= this._buffer.maxByteLength) {
+                this.rewind();
+                this._buffer.resize(newByteLength);
+                this._vector = new Float32Array(this._buffer);
+            } else {
+                const newMaxBytes = newByteLength * 2;
+                const newBuffer = new ArrayBuffer(newByteLength, { maxByteLength: newMaxBytes });
+                const newVector = new Float32Array(newBuffer);
+                newVector.set(this._vector.subarray(this.startIndex, this.endIndex));
+                this._buffer = newBuffer;
+                this._vector = newVector;
+                this._position = 0;
+            }
+        } else this.rewind();
+    }
+    ensureAdditionalCapacity(numFrames = 0) { this.ensureCapacity(this._frameCount + numFrames); }
+    rewind() {
+        if (this._position > 0) {
+            this._vector.set(this._vector.subarray(this.startIndex, this.endIndex));
+            this._position = 0;
+        }
+    }
+};
+//#endregion
+
+//#region ../core/src/AbstractFifoSamplePipe.ts
+var AbstractFifoSamplePipe = class {
+    _inputBuffer;
+    _outputBuffer;
+    constructor(createBuffers) {
+        if (createBuffers) {
+            this._inputBuffer = new FifoSampleBuffer();
+            this._outputBuffer = new FifoSampleBuffer();
+        } else {
+            this._inputBuffer = null;
+            this._outputBuffer = null;
+        }
+    }
+    get inputBuffer() { return this._inputBuffer; }
+    set inputBuffer(inputBuffer) { this._inputBuffer = inputBuffer; }
+    get outputBuffer() { return this._outputBuffer; }
+    set outputBuffer(outputBuffer) { this._outputBuffer = outputBuffer; }
+    clear() { this._inputBuffer?.clear(); this._outputBuffer?.clear(); }
+};
+//#endregion
+
+//#region ../core/src/RateTransposer.ts
+var RateTransposer = class RateTransposer extends AbstractFifoSamplePipe {
+    _rate;
+    slopeCount;
+    prevSampleL;
+    prevSampleR;
+    constructor(createBuffers) {
+        super(createBuffers);
+        this.slopeCount = 0;
+        this.prevSampleL = 0;
+        this.prevSampleR = 0;
+        this._rate = 1;
+    }
+    set rate(rate) { this._rate = rate; }
+    reset() { this.slopeCount = 0; this.prevSampleL = 0; this.prevSampleR = 0; }
+    clear() { super.clear(); this.reset(); }
+    clone() { const result = new RateTransposer(); result.rate = this._rate; return result; }
+    process() {
+        const numFrames = this._inputBuffer.frameCount;
+        this._outputBuffer.ensureAdditionalCapacity(numFrames / this._rate + 1);
+        const numFramesOutput = this.transpose(numFrames);
+        this._inputBuffer.receive();
+        this._outputBuffer.put(numFramesOutput);
+    }
+    transpose(numFrames = 0) {
+        if (numFrames === 0) return 0;
+        const src = this._inputBuffer.vector;
+        const srcOffset = this._inputBuffer.startIndex;
+        const dest = this._outputBuffer.vector;
+        const destOffset = this._outputBuffer.endIndex;
+        let used = 0;
+        let i = 0;
+        while (this.slopeCount < 1) {
+            dest[destOffset + 2 * i] = (1 - this.slopeCount) * this.prevSampleL + this.slopeCount * src[srcOffset];
+            dest[destOffset + 2 * i + 1] = (1 - this.slopeCount) * this.prevSampleR + this.slopeCount * src[srcOffset + 1];
+            i = i + 1;
+            this.slopeCount += this._rate;
+        }
+        this.slopeCount -= 1;
+        if (numFrames !== 1) out: while (true) {
+            while (this.slopeCount > 1) {
+                this.slopeCount -= 1;
+                used = used + 1;
+                if (used >= numFrames - 1) break out;
+            }
+            const srcIndex = srcOffset + 2 * used;
+            dest[destOffset + 2 * i] = (1 - this.slopeCount) * src[srcIndex] + this.slopeCount * src[srcIndex + 2];
+            dest[destOffset + 2 * i + 1] = (1 - this.slopeCount) * src[srcIndex + 1] + this.slopeCount * src[srcIndex + 3];
+            i = i + 1;
+            this.slopeCount += this._rate;
+        }
+        this.prevSampleL = src[srcOffset + 2 * numFrames - 2];
+        this.prevSampleR = src[srcOffset + 2 * numFrames - 1];
+        return i;
+    }
+};
+//#endregion
+
+//#region ../core/src/Stretch.ts
+var DEFAULT_SEQUENCE_MS = 0;
+var DEFAULT_SEEKWINDOW_MS = 0;
+var DEFAULT_OVERLAP_MS = 8;
+var _SCAN_OFFSETS = [
+    [124,186,248,310,372,434,496,558,620,682,744,806,868,930,992,1054,1116,1178,1240,1302,1364,1426,1488,0],
+    [-100,-75,-50,-25,25,50,75,100,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [-20,-15,-10,-5,5,10,15,20,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [-4,-3,-2,-1,1,2,3,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+];
+var AUTOSEQ_TEMPO_LOW = .25;
+var AUTOSEQ_TEMPO_TOP = 4;
+var AUTOSEQ_AT_MIN = 125;
+var AUTOSEQ_AT_MAX = 50;
+var AUTOSEQ_K = (AUTOSEQ_AT_MAX - AUTOSEQ_AT_MIN) / (AUTOSEQ_TEMPO_TOP - AUTOSEQ_TEMPO_LOW);
+var AUTOSEQ_C = AUTOSEQ_AT_MIN - AUTOSEQ_K * AUTOSEQ_TEMPO_LOW;
+var AUTOSEEK_AT_MIN = 25;
+var AUTOSEEK_AT_MAX = 15;
+var AUTOSEEK_K = (AUTOSEEK_AT_MAX - AUTOSEEK_AT_MIN) / (AUTOSEQ_TEMPO_TOP - AUTOSEQ_TEMPO_LOW);
+var AUTOSEEK_C = AUTOSEEK_AT_MIN - AUTOSEEK_K * AUTOSEQ_TEMPO_LOW;
+var Stretch = class Stretch extends AbstractFifoSamplePipe {
+    _quickSeek;
+    midBufferDirty;
+    midBuffer;
+    refMidBuffer;
+    overlapLength;
+    autoSeqSetting;
+    autoSeekSetting;
+    _tempo;
+    sampleRate;
+    overlapMs;
+    sequenceMs;
+    seekWindowMs;
+    seekWindowLength;
+    seekLength;
+    nominalSkip;
+    skipFract;
+    sampleReq;
+    constructor(createBuffers) {
+        super(createBuffers);
+        this._quickSeek = true;
+        this.midBufferDirty = true;
+        this.midBuffer = null;
+        this.overlapLength = 0;
+        this.autoSeqSetting = true;
+        this.autoSeekSetting = true;
+        this._tempo = 1;
+        this.setParameters(44100, DEFAULT_SEQUENCE_MS, DEFAULT_SEEKWINDOW_MS, DEFAULT_OVERLAP_MS);
+    }
+    clear() { super.clear(); this.clearMidBuffer(); }
+    clearMidBuffer() {
+        this.midBufferDirty = true;
+        if (this.midBuffer) this.midBuffer.fill(0);
+        if (this.refMidBuffer) this.refMidBuffer.fill(0);
+        this.skipFract = 0;
+    }
+    setParameters(sampleRate, sequenceMs, seekWindowMs, overlapMs) {
+        if (sampleRate > 0) this.sampleRate = sampleRate;
+        if (overlapMs > 0) this.overlapMs = overlapMs;
+        if (sequenceMs > 0) { this.sequenceMs = sequenceMs; this.autoSeqSetting = false; }
+        else this.autoSeqSetting = true;
+        if (seekWindowMs > 0) { this.seekWindowMs = seekWindowMs; this.autoSeekSetting = false; }
+        else this.autoSeekSetting = true;
+        this.calculateSequenceParameters();
+        this.calculateOverlapLength(this.overlapMs);
+        this.tempo = this._tempo;
+    }
+    set tempo(newTempo) {
+        this._tempo = newTempo;
+        this.calculateSequenceParameters();
+        this.nominalSkip = this._tempo * (this.seekWindowLength - this.overlapLength);
+        this.skipFract = 0;
+        const intskip = Math.floor(this.nominalSkip + .5);
+        this.sampleReq = Math.max(intskip + this.overlapLength, this.seekWindowLength) + this.seekLength;
+    }
+    get tempo() { return this._tempo; }
+    get inputChunkSize() { return this.sampleReq; }
+    get outputChunkSize() { return this.overlapLength + Math.max(0, this.seekWindowLength - 2 * this.overlapLength); }
+    calculateOverlapLength(overlapInMsec = 0) {
+        let newOvl = this.sampleRate * overlapInMsec / 1e3;
+        newOvl = newOvl < 16 ? 16 : newOvl;
+        newOvl -= newOvl % 8;
+        if (newOvl === this.overlapLength && this.midBuffer !== null) return;
+        this.overlapLength = newOvl;
+        const needed = this.overlapLength * 2;
+        if (!this.refMidBuffer || this.refMidBuffer.length < needed) this.refMidBuffer = new Float32Array(needed);
+        if (!this.midBuffer || this.midBuffer.length < needed) this.midBuffer = new Float32Array(needed);
+    }
+    checkLimits(x, mi, ma) { return x < mi ? mi : x > ma ? ma : x; }
+    calculateSequenceParameters() {
+        if (this.autoSeqSetting) {
+            let seq = AUTOSEQ_C + AUTOSEQ_K * this._tempo;
+            seq = this.checkLimits(seq, AUTOSEQ_AT_MAX, AUTOSEQ_AT_MIN);
+            this.sequenceMs = Math.floor(seq + .5);
+        }
+        if (this.autoSeekSetting) {
+            let seek = AUTOSEEK_C + AUTOSEEK_K * this._tempo;
+            seek = this.checkLimits(seek, AUTOSEEK_AT_MAX, AUTOSEEK_AT_MIN);
+            this.seekWindowMs = Math.floor(seek + .5);
+        }
+        this.seekWindowLength = Math.floor(this.sampleRate * this.sequenceMs / 1e3);
+        this.seekLength = Math.floor(this.sampleRate * this.seekWindowMs / 1e3);
+    }
+    set quickSeek(enable) { this._quickSeek = enable; }
+    clone() {
+        const result = new Stretch();
+        result.tempo = this._tempo;
+        result.setParameters(this.sampleRate, this.sequenceMs, this.seekWindowMs, this.overlapMs);
+        return result;
+    }
+    seekBestOverlapPosition() {
+        return this._quickSeek ? this.seekBestOverlapPositionStereoQuick() : this.seekBestOverlapPositionStereo();
+    }
+    seekBestOverlapPositionStereo() {
+        let bestOffset, bestCorrelation, correlation;
+        this.preCalculateCorrelationReferenceStereo();
+        bestOffset = 0;
+        bestCorrelation = Number.MIN_VALUE;
+        for (let i = 0; i < this.seekLength; i++) {
+            correlation = this.calculateCrossCorrelationStereo(2 * i, this.refMidBuffer);
+            if (correlation > bestCorrelation) { bestCorrelation = correlation; bestOffset = i; }
+        }
+        return bestOffset;
+    }
+    seekBestOverlapPositionStereoQuick() {
+        let bestOffset, bestCorrelation, correlation, correlationOffset, tempOffset;
+        this.preCalculateCorrelationReferenceStereo();
+        bestCorrelation = Number.MIN_VALUE;
+        bestOffset = 0;
+        correlationOffset = 0;
+        for (let scanCount = 0; scanCount < 4; scanCount++) {
+            let j = 0;
+            while (_SCAN_OFFSETS[scanCount][j]) {
+                tempOffset = correlationOffset + _SCAN_OFFSETS[scanCount][j];
+                if (tempOffset >= this.seekLength) break;
+                correlation = this.calculateCrossCorrelationStereo(2 * tempOffset, this.refMidBuffer);
+                if (correlation > bestCorrelation) { bestCorrelation = correlation; bestOffset = tempOffset; }
+                j++;
+            }
+            correlationOffset = bestOffset;
+        }
+        return bestOffset;
+    }
+    preCalculateCorrelationReferenceStereo() {
+        for (let i = 0; i < this.overlapLength; i++) {
+            const temp = i * (this.overlapLength - i);
+            const ctx = i * 2;
+            this.refMidBuffer[ctx] = this.midBuffer[ctx] * temp;
+            this.refMidBuffer[ctx + 1] = this.midBuffer[ctx + 1] * temp;
+        }
+    }
+    calculateCrossCorrelationStereo(mixingPos, compare) {
+        const mixing = this._inputBuffer.vector;
+        mixingPos += this._inputBuffer.startIndex;
+        let correlation = 0;
+        const calcLength = 2 * this.overlapLength;
+        for (let i = 2; i < calcLength; i += 2) {
+            const mixingOffset = i + mixingPos;
+            correlation += mixing[mixingOffset] * compare[i] + mixing[mixingOffset + 1] * compare[i + 1];
+        }
+        return correlation;
+    }
+    overlap(overlapPosition) { this.overlapStereo(2 * overlapPosition); }
+    overlapStereo(inputPosition) {
+        const input = this._inputBuffer.vector;
+        inputPosition += this._inputBuffer.startIndex;
+        const output = this._outputBuffer.vector;
+        const outputPosition = this._outputBuffer.endIndex;
+        const frameScale = 1 / this.overlapLength;
+        for (let i = 0; i < this.overlapLength; i++) {
+            const tempFrame = (this.overlapLength - i) * frameScale;
+            const fi = i * frameScale;
+            const ctx = 2 * i;
+            const inputOffset = ctx + inputPosition;
+            const outputOffset = ctx + outputPosition;
+            output[outputOffset] = input[inputOffset] * fi + this.midBuffer[ctx] * tempFrame;
+            output[outputOffset + 1] = input[inputOffset + 1] * fi + this.midBuffer[ctx + 1] * tempFrame;
+        }
+    }
+    process() {
+        if (this.midBufferDirty) {
+            if (this._inputBuffer.frameCount < this.overlapLength) return;
+            const needed = this.overlapLength * 2;
+            if (!this.midBuffer || this.midBuffer.length < needed) this.midBuffer = new Float32Array(needed);
+            this._inputBuffer.receiveSamples(this.midBuffer, this.overlapLength);
+            this.midBufferDirty = false;
+        }
+        while (this._inputBuffer.frameCount >= this.sampleReq) {
+            const offset = this.seekBestOverlapPosition();
+            this._outputBuffer.ensureAdditionalCapacity(this.overlapLength);
+            this.overlap(Math.floor(offset));
+            this._outputBuffer.put(this.overlapLength);
+            const temp = this.seekWindowLength - 2 * this.overlapLength;
+            if (temp > 0) this._outputBuffer.putBuffer(this._inputBuffer, offset + this.overlapLength, temp);
+            const start = this._inputBuffer.startIndex + 2 * (offset + this.seekWindowLength - this.overlapLength);
+            this.midBuffer.set(this._inputBuffer.vector.subarray(start, start + 2 * this.overlapLength));
+            this.skipFract += this.nominalSkip;
+            const overlapSkip = Math.floor(this.skipFract);
+            this.skipFract -= overlapSkip;
+            this._inputBuffer.receive(overlapSkip);
+        }
+    }
+};
+//#endregion
+
+//#region ../core/src/testFloatEqual.ts
+function testFloatEqual(a, b) {
+    return (a > b ? a - b : b - a) > 1e-10;
+}
+//#endregion
+
+//#region ../core/src/SoundTouch.ts
+var SoundTouch = class SoundTouch {
+    transposer;
+    stretch;
+    _inputBuffer;
+    _intermediateBuffer;
+    _outputBuffer;
+    _rate;
+    _tempo;
+    virtualPitch;
+    virtualRate;
+    virtualTempo;
+    constructor() {
+        this.transposer = new RateTransposer(false);
+        this.stretch = new Stretch(false);
+        this._inputBuffer = new FifoSampleBuffer();
+        this._intermediateBuffer = new FifoSampleBuffer();
+        this._outputBuffer = new FifoSampleBuffer();
+        this._rate = 0;
+        this._tempo = 0;
+        this.virtualPitch = 1;
+        this.virtualRate = 1;
+        this.virtualTempo = 1;
+        this.calculateEffectiveRateAndTempo();
+    }
+    clear() { this.transposer.clear(); this.stretch.clear(); }
+    clone() { const result = new SoundTouch(); result.rate = this.rate; result.tempo = this.tempo; return result; }
+    get rate() { return this._rate; }
+    set rate(rate) { this.virtualRate = rate; this.calculateEffectiveRateAndTempo(); }
+    set rateChange(rateChange) { this._rate = 1 + .01 * rateChange; }
+    get tempo() { return this._tempo; }
+    set tempo(tempo) { this.virtualTempo = tempo; this.calculateEffectiveRateAndTempo(); }
+    set tempoChange(tempoChange) { this.tempo = 1 + .01 * tempoChange; }
+    set pitch(pitch) { this.virtualPitch = pitch; this.calculateEffectiveRateAndTempo(); }
+    set pitchOctaves(pitchOctaves) { this.pitch = Math.exp(.69314718056 * pitchOctaves); this.calculateEffectiveRateAndTempo(); }
+    set pitchSemitones(pitchSemitones) { this.pitchOctaves = pitchSemitones / 12; }
+    get inputBuffer() { return this._inputBuffer; }
+    get outputBuffer() { return this._outputBuffer; }
+    calculateEffectiveRateAndTempo() {
+        const previousTempo = this._tempo;
+        const previousRate = this._rate;
+        this._tempo = this.virtualTempo / this.virtualPitch;
+        this._rate = this.virtualRate * this.virtualPitch;
+        if (testFloatEqual(this._tempo, previousTempo)) this.stretch.tempo = this._tempo;
+        if (testFloatEqual(this._rate, previousRate)) this.transposer.rate = this._rate;
+        if (this._rate > 1) {
+            if (this._outputBuffer !== this.transposer.outputBuffer) {
+                this.stretch.inputBuffer = this._inputBuffer;
+                this.stretch.outputBuffer = this._intermediateBuffer;
+                this.transposer.inputBuffer = this._intermediateBuffer;
+                this.transposer.outputBuffer = this._outputBuffer;
+            }
+        } else if (this._outputBuffer !== this.stretch.outputBuffer) {
+            this.transposer.inputBuffer = this._inputBuffer;
+            this.transposer.outputBuffer = this._intermediateBuffer;
+            this.stretch.inputBuffer = this._intermediateBuffer;
+            this.stretch.outputBuffer = this._outputBuffer;
+        }
+    }
+    process() {
+        if (this._rate > 1) { this.stretch.process(); this.transposer.process(); }
+        else { this.transposer.process(); this.stretch.process(); }
+    }
+};
+//#endregion
+
+// ══════════════════════════════════════════════════════════════════════════════
+// App state
+// ══════════════════════════════════════════════════════════════════════════════
+let library     = {};
+let currentSong = null;
+
+let instrBuffer = null;
+let vocalBuffer = null;
+let instrReady  = null;
+let vocalReady  = null;
+let lastProcessedTempo = null;
+let lastProcessedPitch = null;
+
+let instrNode    = null;
+let vocalNode    = null;
+let vocalGainNode = null;
+
+let isPlaying    = false;
+let startCtxTime = 0;
+let startOffset  = 0;
+let isScrubbing  = false;
+let animFrame    = null;
+
+let vocalLevel    = 100;
+let tempoRatio    = 1.0;
+let pitchSemitones = 0;
+
+let regionInFrac  = 0;
+let regionOutFrac = 1;
+let loopRegion    = true;
+
+function regionIsActive() {
+    return regionInFrac > 0.001 || regionOutFrac < 0.999;
+}
+
+let audioCtx = null;
+
+// ══════════════════════════════════════════════════════════════════════════════
+// AudioContext init
+// ══════════════════════════════════════════════════════════════════════════════
+async function initAudioContext() {
+    if (audioCtx) {
+        if (audioCtx.state === 'suspended') await audioCtx.resume();
+        return;
+    }
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    vocalGainNode = audioCtx.createGain();
+    vocalGainNode.gain.value = vocalLevel / 100;
+    vocalGainNode.connect(audioCtx.destination);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// File loading
+// ══════════════════════════════════════════════════════════════════════════════
+function openFilePicker() {
+    const input = document.getElementById('fileInput');
+    input.removeAttribute('webkitdirectory');
+    try { input.setAttribute('webkitdirectory', ''); } catch(e) {}
+    input.click();
+}
+
+document.getElementById('fileInput').addEventListener('change', function(e) {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+        const name = file.name;
+        const vocalMatch = name.match(/^(.+?)\s*-\s*Vocals?\.(mp3|wav|m4a|aiff|ogg|flac)$/i);
+        const instrMatch  = name.match(/^(.+?)\s*-\s*Instrumentals?\.(mp3|wav|m4a|aiff|ogg|flac)$/i);
+        if (vocalMatch) {
+            const title = vocalMatch[1].trim();
+            if (!library[title]) library[title] = {};
+            library[title].vocal = file;
+        } else if (instrMatch) {
+            const title = instrMatch[1].trim();
+            if (!library[title]) library[title] = {};
+            library[title].instrumental = file;
+        }
+    });
+    renderSongList();
+    this.value = '';
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Song list
+// ══════════════════════════════════════════════════════════════════════════════
+function renderSongList() {
+    const list = document.getElementById('songList');
+    const pairs = Object.keys(library)
+        .filter(n => library[n].vocal && library[n].instrumental)
+        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+
+    if (pairs.length === 0) {
+        list.innerHTML = '<div class="empty-list">No matching pairs found.<br><br>Files must be named:<br><em>Song - Vocals.mp3<br>Song - Instrumental.mp3</em></div>';
+        return;
+    }
+    list.innerHTML = '';
+    pairs.forEach(name => {
+        const div = document.createElement('div');
+        div.className = 'song-item' + (name === currentSong ? ' active' : '');
+        div.textContent = name;
+        div.title = name;
+        div.addEventListener('click', () => selectSong(name));
+        list.appendChild(div);
+    });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Select & decode a song
+// ══════════════════════════════════════════════════════════════════════════════
+async function selectSong(name) {
+    if (name === currentSong) return;
+    stopNodes();
+    isPlaying = false;
+    startOffset = 0;
+    currentSong = name;
+
+    document.querySelectorAll('.song-item').forEach(el => {
+        el.classList.toggle('active', el.textContent === name);
+    });
+
+    renderPlayer();
+    setStatus('Loading...');
+    setPlayEnabled(false);
+
+    try {
+        await initAudioContext();
+
+        const [instrArr, vocalArr] = await Promise.all([
+            library[name].instrumental.arrayBuffer(),
+            library[name].vocal.arrayBuffer()
+        ]);
+
+        [instrBuffer, vocalBuffer] = await Promise.all([
+            audioCtx.decodeAudioData(instrArr),
+            audioCtx.decodeAudioData(vocalArr)
+        ]);
+
+        instrReady = null;
+        vocalReady = null;
+        lastProcessedTempo = null;
+        lastProcessedPitch = null;
+
+        setStatus('');
+        setPlayEnabled(true);
+        updateDurationDisplay(instrBuffer.duration);
+        updateProgressUI(0);
+
+    } catch(err) {
+        setStatus('Error loading file.');
+        console.error('Load error:', err);
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SoundTouch processing
+// ══════════════════════════════════════════════════════════════════════════════
+async function processBuffersIfNeeded() {
+    if (tempoRatio === lastProcessedTempo && pitchSemitones === lastProcessedPitch && instrReady && vocalReady) return;
+
+    if (tempoRatio === 1.0 && pitchSemitones === 0) {
+        instrReady = instrBuffer;
+        vocalReady = vocalBuffer;
+        lastProcessedTempo = 1.0;
+        lastProcessedPitch = 0;
+        return;
+    }
+
+    setStatus('Processing...');
+    try {
+        instrReady = await processOneBuffer(instrBuffer, tempoRatio, pitchSemitones);
+        vocalReady = await processOneBuffer(vocalBuffer, tempoRatio, pitchSemitones);
+        lastProcessedTempo = tempoRatio;
+        lastProcessedPitch = pitchSemitones;
+        setStatus('');
+    } catch(err) {
+        setStatus('Processing error.');
+        console.error('Process error:', err);
+        throw err;
+    }
+}
+
+async function processOneBuffer(buffer, ratio, semitones) {
+    const sr = buffer.sampleRate;
+    const numFrames = buffer.length;
+    const left  = buffer.getChannelData(0);
+    const right = buffer.numberOfChannels > 1 ? buffer.getChannelData(1) : buffer.getChannelData(0);
+    const st = new SoundTouch();
+    st.tempo = ratio;
+    if (semitones !== 0) st.pitchSemitones = semitones;
+    const CHUNK = 8192;
+    const outputChunks = [];
+    let inputPos = 0;
+    while (inputPos < numFrames) {
+        const count = Math.min(CHUNK, numFrames - inputPos);
+        const samples = new Float32Array(count * 2);
+        for (let i = 0; i < count; i++) {
+            samples[i * 2]     = left[inputPos + i];
+            samples[i * 2 + 1] = right[inputPos + i];
+        }
+        st.inputBuffer.putSamples(samples, 0, count);
+        st.process();
+        const avail = st.outputBuffer.frameCount;
+        if (avail > 0) {
+            const out = new Float32Array(avail * 2);
+            st.outputBuffer.receiveSamples(out, avail);
+            outputChunks.push(out);
+        }
+        inputPos += count;
+        if ((inputPos / CHUNK) % 10 === 0) await new Promise(r => setTimeout(r, 0));
+    }
+    for (let flush = 0; flush < 5; flush++) {
+        st.process();
+        const avail = st.outputBuffer.frameCount;
+        if (avail > 0) {
+            const out = new Float32Array(avail * 2);
+            st.outputBuffer.receiveSamples(out, avail);
+            outputChunks.push(out);
+        } else break;
+    }
+    const totalFrames = outputChunks.reduce((sum, c) => sum + c.length / 2, 0);
+    const outBuf = audioCtx.createBuffer(2, Math.ceil(totalFrames), sr);
+    const outL = new Float32Array(Math.ceil(totalFrames));
+    const outR = new Float32Array(Math.ceil(totalFrames));
+    let offset = 0;
+    for (const chunk of outputChunks) {
+        const frames = chunk.length / 2;
+        for (let i = 0; i < frames; i++) {
+            outL[offset + i] = chunk[i * 2];
+            outR[offset + i] = chunk[i * 2 + 1];
+        }
+        offset += frames;
+    }
+    outBuf.copyToChannel(outL, 0);
+    outBuf.copyToChannel(outR, 1);
+    return outBuf;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Playback
+// ══════════════════════════════════════════════════════════════════════════════
+async function startPlayback() {
+    if (!instrBuffer) return;
+    await initAudioContext();
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+    setPlayEnabled(false);
+    await processBuffersIfNeeded();
+    setPlayEnabled(true);
+
+    // If region is active, keep start within the region
+    if (regionIsActive() && instrBuffer) {
+        const inTime  = regionInFrac  * instrBuffer.duration;
+        const outTime = regionOutFrac * instrBuffer.duration;
+        if (startOffset < inTime || startOffset >= outTime) {
+            startOffset = inTime;
+        }
+    }
+
+    // ── Pre-roll fade-in ──────────────────────────────────────────────────
+    // Only when looping AND the start point is beyond 2 s from the beginning.
+    const PREROLL = 2; // seconds (original-time)
+    const usePreroll = loopRegion
+        && regionIsActive()
+        && startOffset > PREROLL;   // covers 0 s, 1 s, 2 s and below
+
+    const prerollOffset = usePreroll ? startOffset - PREROLL : startOffset;
+    const processedOffset = prerollOffset / tempoRatio;
+    // ─────────────────────────────────────────────────────────────────────
+
+    instrNode = audioCtx.createBufferSource();
+    vocalNode = audioCtx.createBufferSource();
+    instrNode.buffer = instrReady;
+    vocalNode.buffer = vocalReady;
+
+    // Fresh gain node for the pre-roll fade — created per play call so
+    // ramps never bleed across loop iterations.
+    const prerollGain = audioCtx.createGain();
+    prerollGain.connect(audioCtx.destination);
+
+    // Signal chain:
+    //   instrNode ──────────────────────► prerollGain ► destination
+    //   vocalNode ► vocalGainNode (user level) ► prerollGain ► destination
+    instrNode.connect(prerollGain);
+    vocalNode.connect(vocalGainNode);
+    vocalGainNode.disconnect();
+    vocalGainNode.connect(prerollGain);
+
+    if (usePreroll) {
+        prerollGain.gain.setValueAtTime(0, audioCtx.currentTime);
+        prerollGain.gain.linearRampToValueAtTime(1, audioCtx.currentTime + PREROLL);
+    } else {
+        prerollGain.gain.setValueAtTime(1, audioCtx.currentTime);
+    }
+
+    instrNode.start(0, processedOffset);
+    vocalNode.start(0, processedOffset);
+
+    instrNode.onended = onTrackEnded;
+
+    startCtxTime = audioCtx.currentTime;
+    // Back-date startOffset so getCurrentOriginalTime() reflects the true
+    // musical position during the pre-roll window.
+    if (usePreroll) {
+        startOffset = prerollOffset * tempoRatio;
+    }
+
+    isPlaying = true;
+    setPlayButton(true);
+    setTransportLocked(true);
+    tickProgress();
+}
+
+function pausePlayback() {
+    startOffset = getCurrentOriginalTime();
+    stopNodes();
+    isPlaying = false;
+    setPlayButton(false);
+    setTransportLocked(false);
+}
+
+function stopAndRewind() {
+    stopNodes();
+    isPlaying = false;
+    const rewindFrac = (regionIsActive() && instrBuffer) ? regionInFrac : 0;
+    startOffset = rewindFrac * (instrBuffer ? instrBuffer.duration : 0);
+    setPlayButton(false);
+    setTransportLocked(false);
+    updateProgressUI(rewindFrac);
+}
+
+function stopNodes() {
+    cancelAnimationFrame(animFrame);
+    if (instrNode) { instrNode.onended = null; try { instrNode.stop(); } catch(e) {} try { instrNode.disconnect(); } catch(e) {} instrNode = null; }
+    if (vocalNode) { vocalNode.onended = null; try { vocalNode.stop(); } catch(e) {} try { vocalNode.disconnect(); } catch(e) {} vocalNode = null; }
+    // Restore vocalGainNode to its default destination after any pre-roll rewiring
+    if (vocalGainNode && audioCtx) {
+        try { vocalGainNode.disconnect(); } catch(e) {}
+        vocalGainNode.connect(audioCtx.destination);
+    }
+}
+
+function onTrackEnded() {
+    if (!isPlaying) return;
+    stopNodes();
+    isPlaying = false;
+    startOffset = 0;
+    setPlayButton(false);
+    setTransportLocked(false);
+    updateProgressUI(0);
+}
+
+function togglePlay() {
+    isPlaying ? pausePlayback() : startPlayback();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Time tracking
+// ══════════════════════════════════════════════════════════════════════════════
+function getCurrentOriginalTime() {
+    if (!isPlaying) return startOffset;
+    return startOffset + (audioCtx.currentTime - startCtxTime) * tempoRatio;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Scrubbing
+// ══════════════════════════════════════════════════════════════════════════════
+function onScrubInput(e) {
+    const frac = parseFloat(e.target.value) / 1000;
+    const cur  = document.getElementById('timeCurrent');
+    if (cur && instrBuffer) cur.textContent = formatTime(frac * instrBuffer.duration);
+    updateScrubFill();
+}
+
+function onScrubRelease(e) {
+    isScrubbing = false;
+    seekToFraction(parseFloat(e.target.value) / 1000);
+}
+
+async function seekToFraction(frac) {
+    if (!instrBuffer) return;
+    const wasPlaying = isPlaying;
+    stopNodes();
+    isPlaying = false;
+    startOffset = frac * instrBuffer.duration;
+    if (wasPlaying) {
+        await startPlayback();
+    } else {
+        updateProgressUI(frac);
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Progress animation
+// ══════════════════════════════════════════════════════════════════════════════
+function tickProgress() {
+    if (!isPlaying) return;
+    if (!isScrubbing && instrBuffer) {
+        const currentTime = getCurrentOriginalTime();
+        const duration    = instrBuffer.duration;
+
+        if (regionIsActive() && currentTime >= regionOutFrac * duration) {
+            stopNodes();
+            isPlaying = false;
+            startOffset = regionInFrac * duration;
+            setPlayButton(false);
+            setTransportLocked(false);
+            if (loopRegion) {
+                startPlayback();
+            } else {
+                updateProgressUI(regionInFrac);
+            }
+            return;
+        }
+
+        const frac = Math.min(1, currentTime / duration);
+        updateProgressUI(frac);
+    }
+    animFrame = requestAnimationFrame(tickProgress);
+}
+
+function updateProgressUI(frac) {
+    const scrub = document.getElementById('scrubBar');
+    const cur   = document.getElementById('timeCurrent');
+    if (!scrub || !cur || !instrBuffer) return;
+    scrub.value = frac * 1000;
+    cur.textContent = formatTime(frac * instrBuffer.duration);
+    updateScrubFill();
+}
+
+function updateDurationDisplay(dur) {
+    const el = document.getElementById('timeTotal');
+    if (el) el.textContent = formatTime(dur || 0);
+    updateRegionDisplay();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Vocal volume
+// ══════════════════════════════════════════════════════════════════════════════
+function onVocalSlider(e) {
+    vocalLevel = parseFloat(e.target.value);
+    document.getElementById('vocalValue').textContent = vocalLevel + '%';
+    if (vocalGainNode) vocalGainNode.gain.value = vocalLevel / 100;
+    updateVocalFill();
+    updatePresetButtons();
+}
+
+function setVocalPreset(level) {
+    vocalLevel = level;
+    const s = document.getElementById('vocalSlider');
+    const v = document.getElementById('vocalValue');
+    if (s) s.value = level;
+    if (v) v.textContent = level + '%';
+    if (vocalGainNode) vocalGainNode.gain.value = level / 100;
+    updateVocalFill();
+    updatePresetButtons();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Tempo
+// ══════════════════════════════════════════════════════════════════════════════
+function onTempoSlider(e) {
+    tempoRatio = parseFloat(e.target.value) / 100;
+    document.getElementById('tempoValue').textContent = Math.round(tempoRatio * 100) + '%';
+    updateTempoFill();
+    updatePresetButtons();
+    if (isPlaying) {
+        const t = getCurrentOriginalTime();
+        stopNodes();
+        isPlaying = false;
+        startOffset = t;
+        lastProcessedTempo = null;
+        startPlayback();
+    }
+}
+
+function setTempoPreset(pct) {
+    tempoRatio = pct / 100;
+    const s = document.getElementById('tempoSlider');
+    const v = document.getElementById('tempoValue');
+    if (s) s.value = pct;
+    if (v) v.textContent = pct + '%';
+    updateTempoFill();
+    updatePresetButtons();
+    if (isPlaying) {
+        const t = getCurrentOriginalTime();
+        stopNodes();
+        isPlaying = false;
+        startOffset = t;
+        lastProcessedTempo = null;
+        startPlayback();
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Loop Region
+// ══════════════════════════════════════════════════════════════════════════════
+function onRegionInSlider(e) {
+    let val = parseInt(e.target.value, 10);
+    const outVal = parseInt(document.getElementById('regionOut').value, 10);
+    if (val >= outVal - 10) { val = outVal - 10; e.target.value = val; }
+    regionInFrac = val / 1000;
+    updateRegionFill();
+    updateRegionDisplay();
+}
+
+function onRegionOutSlider(e) {
+    let val = parseInt(e.target.value, 10);
+    const inVal = parseInt(document.getElementById('regionIn').value, 10);
+    if (val <= inVal + 10) { val = inVal + 10; e.target.value = val; }
+    regionOutFrac = val / 1000;
+    updateRegionFill();
+    updateRegionDisplay();
+}
+
+function clearRegion() {
+    regionInFrac  = 0;
+    regionOutFrac = 1;
+    const inEl  = document.getElementById('regionIn');
+    const outEl = document.getElementById('regionOut');
+    if (inEl)  inEl.value  = 0;
+    if (outEl) outEl.value = 1000;
+    updateRegionFill();
+    updateRegionDisplay();
+}
+
+function updateRegionFill() {
+    const inEl  = document.getElementById('regionIn');
+    const outEl = document.getElementById('regionOut');
+    if (inEl) {
+        const pct = (regionInFrac * 100).toFixed(1);
+        inEl.style.background = `linear-gradient(to right, #1a5c3a ${pct}%, #333 ${pct}%)`;
+    }
+    if (outEl) {
+        const pct = (regionOutFrac * 100).toFixed(1);
+        outEl.style.background = `linear-gradient(to right, #5c1a1a ${pct}%, #333 ${pct}%)`;
+    }
+}
+
+function updateRegionDisplay() {
+    const inEl  = document.getElementById('regionInTime');
+    const outEl = document.getElementById('regionOutTime');
+    const lbl   = document.getElementById('regionLabel');
+    if (!inEl || !outEl) return;
+    const duration = instrBuffer ? instrBuffer.duration : 0;
+    inEl.textContent  = formatTime(regionInFrac  * duration);
+    outEl.textContent = formatTime(regionOutFrac * duration);
+    const active = regionIsActive();
+    inEl.classList.toggle('dim',  regionInFrac  < 0.001);
+    outEl.classList.toggle('dim', regionOutFrac
