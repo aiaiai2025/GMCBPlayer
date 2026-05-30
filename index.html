@@ -991,7 +991,9 @@
             text-align: center;
         }
         .save-settings-btn:hover { border-color: #555; color: #aaa; }
-        .save-settings-btn.is-saved { border-color: #34d399; color: #34d399; }
+        /* Saved state: passive status badge — dim, no border, not attention-grabbing */
+        .save-settings-btn.is-saved { border-color: transparent; color: #34d399; opacity: 0.45; cursor: default; }
+        .save-settings-btn.is-saved:hover { border-color: transparent; color: #34d399; opacity: 0.45; }
         .clear-settings-btn {
             padding: 5px 9px;
             background: transparent;
@@ -1059,7 +1061,7 @@
 <script>
 // Inline songs data — used as fallback when fetch() is blocked (e.g. file:// in Safari).
 // Auto-updated by generate_songs.py — do not edit manually.
-window.SONGS_DATA = {"showTitle":"You're a Good Man Charley Brown","songs":[{"title":"01-Youre a Good Man Charley Brown","instr":"audio/01-Youre a Good Man Charley Brown (instrumental).mp3","vocal":"audio/01-Youre a Good Man Charley Brown (vocals).mp3"},{"title":"02-my-new-philosophy","instr":"audio/02-my-new-philosophy (instrumental).mp3","vocal":"audio/02-my-new-philosophy (vocals).mp3"},{"title":"03-suppertime","instr":"audio/03-suppertime(instrumental).mp3","vocal":"audio/03-suppertime (vocals).mp3"},{"title":"04-beethoven-day","instr":"audio/04-beethoven-day-(instrumental).mp3","vocal":"audio/04-beethoven day (vocals).mp3"},{"title":"05-team-baseball","instr":"audio/05-team-baseball (instrumental).mp3","vocal":"audio/05-team-baseball (vocals).mp3"},{"title":"06-happiness","instr":"audio/06-happiness (instrumental).mp3","vocal":"audio/06-happiness (vocals).mp3"}]};
+window.SONGS_DATA = {"showTitle":"You’re a Good Man Charley Brown","songs":[{"title":"01-Youre a Good Man Charley Brown","instr":"audio/01-Youre a Good Man Charley Brown (instrumental).mp3","vocal":"audio/01-Youre a Good Man Charley Brown (vocals).mp3"},{"title":"02-my-new-philosophy","instr":"audio/02-my-new-philosophy (instrumental).mp3","vocal":"audio/02-my-new-philosophy (vocals).mp3"},{"title":"03-suppertime","instr":"audio/03-suppertime(instrumental).mp3","vocal":"audio/03-suppertime (vocals).mp3"},{"title":"04-beethoven-day","instr":"audio/04-beethoven-day-(instrumental).mp3","vocal":"audio/04-beethoven day (vocals).mp3"},{"title":"05-team-baseball","instr":"audio/05-team-baseball (instrumental).mp3","vocal":"audio/05-team-baseball (vocals).mp3"},{"title":"06-happiness","instr":"audio/06-happiness (instrumental).mp3","vocal":"audio/06-happiness (vocals).mp3"}]};
 </script>
 </head>
 <body>
@@ -1993,6 +1995,8 @@ let cueLoopActive = false;  // cue loop off by default; board op enables if need
 
 // ── Per-playlist saved settings ───────────────────────────────────────────────
 let playlistSettings = {};
+// Namespace localStorage keys by project so multiple shows don't share playlists.
+// Uses the last path segment (folder name on file://, repo name on GitHub Pages).
 const _storageNS = (window.location.origin + window.location.pathname)
     .replace(/\/index\.html$/i, '').replace(/\/$/, '').split('/').pop() || 'default';
 const PLAYLIST_SETTINGS_KEY = 'stemplayer_playlist_settings_' + _storageNS;
@@ -2041,6 +2045,7 @@ function preRollStart(inTime) {
 }
 
 let audioCtx = null;
+let loadGeneration = 0;   // incremented each time selectSong() starts; stale loads self-abort
 
 // Fetch a URL as an ArrayBuffer. Uses XHR so it works on file:// as well as https://.
 function fetchArrayBuffer(url) {
@@ -2219,13 +2224,14 @@ function renderSongList() {
 // ══════════════════════════════════════════════════════════════════════════════
 async function selectSong(name) {
     if (name === currentSong) return;
+    const myGen = ++loadGeneration;   // any older in-flight load will see a mismatched gen and abort
     closeSidebar();
     // Save current settings to session memory before leaving (keyed per playlist)
     if (currentSong) {
         sessionMemory[sessionKey(activePlaylist, currentSong)] = {
-            tempo: Math.round(tempoRatio * 100),
-            pitch: pitchSemitones,
-            vocal: vocalLevel,
+            tempo:     Math.round(tempoRatio * 100),
+            pitch:     pitchSemitones,
+            vocal:     vocalLevel,
             regionIn:  regionInFrac,
             regionOut: regionOutFrac,
         };
@@ -2254,6 +2260,10 @@ async function selectSong(name) {
 
     try {
         await initAudioContext();
+        if (loadGeneration !== myGen) return;   // a newer song was selected while we awaited
+        // Sync vocal gain node to this song's saved/default level — initAudioContext() only sets
+        // it on first call; subsequent songs need an explicit update here.
+        if (vocalGainNode) vocalGainNode.gain.value = vocalLevel / 100;
 
         if (isCueSong) {
             instrBuffer = await audioCtx.decodeAudioData(await fetchArrayBuffer(library[name].src));
@@ -2296,6 +2306,7 @@ async function selectSong(name) {
             postVampVocalBuf = postHasV ? decoded[idx]  : null;
         }
 
+        if (loadGeneration !== myGen) return;   // superseded — discard these buffers
         setStatus('');
         setPlayEnabled(true);
         updateDurationDisplay(instrBuffer.duration);
@@ -2304,6 +2315,7 @@ async function selectSong(name) {
         syncShowReady();
 
     } catch(err) {
+        if (loadGeneration !== myGen) return;   // stale error — ignore silently
         setStatus('Error loading file.');
         console.error('Load error:', err);
     }
@@ -2938,6 +2950,7 @@ function onVocalSlider(e) {
     updateVocalFill();
     updatePresetButtons();
     updateSettingsIndicator();
+    autoSaveCurrentSongSettings();
 }
 
 function setVocalPreset(level) {
@@ -2950,6 +2963,7 @@ function setVocalPreset(level) {
     updateVocalFill();
     updatePresetButtons();
     updateSettingsIndicator();
+    autoSaveCurrentSongSettings();
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -2961,6 +2975,7 @@ function onTempoSlider(e) {
     updateTempoFill();
     updatePresetButtons();
     updateSettingsIndicator();
+    autoSaveCurrentSongSettings();
     // If playing, restart from current position with new tempo
     if (isPlaying) {
         const t = getCurrentOriginalTime();
@@ -2981,6 +2996,7 @@ function setTempoPreset(pct) {
     updateTempoFill();
     updatePresetButtons();
     updateSettingsIndicator();
+    autoSaveCurrentSongSettings();
     if (isPlaying) {
         const t = getCurrentOriginalTime();
         stopNodes();
@@ -2999,6 +3015,7 @@ function clearRegion() {
     regionOutFrac = 1;
     updateRegionBar();
     updateRegionDisplay();
+    autoSaveCurrentSongSettings();
 }
 
 // Paint the region bar track and position the IN/OUT dots.
@@ -3103,8 +3120,11 @@ document.addEventListener('mouseup',   () => {
     const dot = document.getElementById(regionDragging === 'in' ? 'regionDotIn' : 'regionDotOut');
     if (dot) dot.classList.remove('grabbing');
     regionDragging = null;
+    autoSaveCurrentSongSettings();
 });
-document.addEventListener('touchend',  () => { regionDragging = null; });
+document.addEventListener('touchend',  () => {
+    if (regionDragging) { regionDragging = null; autoSaveCurrentSongSettings(); }
+});
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Key / Pitch
@@ -3116,6 +3136,7 @@ function onPitchSlider(e) {
     updatePitchFill();
     updatePresetButtons();
     updateSettingsIndicator();
+    autoSaveCurrentSongSettings();
     if (isPlaying) {
         const t = getCurrentOriginalTime();
         stopNodes();
@@ -3135,6 +3156,7 @@ function setPitchPreset(semi) {
     updatePitchFill();
     updatePresetButtons();
     updateSettingsIndicator();
+    autoSaveCurrentSongSettings();
     if (isPlaying) {
         const t = getCurrentOriginalTime();
         stopNodes();
@@ -3824,6 +3846,25 @@ function saveCurrentSongSettings() {
     setTimeout(() => setStatus(''), 2500);
 }
 
+// Auto-save: called on every slider/preset/region change so settings survive a refresh
+// without requiring the explicit 💾 button. The 💾 button remains for clarity but is
+// now redundant once any adjustment has been made.
+function autoSaveCurrentSongSettings() {
+    if (activePlaylist === 'all' || !currentSong) return;
+    const firstSave = !hasSavedSettings(activePlaylist, currentSong);
+    playlistSettings[activePlaylist]             = playlistSettings[activePlaylist] || {};
+    playlistSettings[activePlaylist][currentSong] = {
+        tempo:     Math.round(tempoRatio * 100),
+        pitch:     pitchSemitones,
+        vocal:     vocalLevel,
+        regionIn:  regionInFrac,
+        regionOut: regionOutFrac,
+    };
+    savePlaylistSettings();
+    updateSaveSettingsBtn();
+    if (firstSave) renderSongList();   // show dot indicator on first save only
+}
+
 function clearCurrentSongSettings() {
     if (activePlaylist === 'all' || !currentSong) return;
     if (playlistSettings[activePlaylist]) {
@@ -3852,7 +3893,7 @@ function updateSaveSettingsBtn() {
     btn.style.display = '';
     const saved = hasSavedSettings(activePlaylist, currentSong);
     if (saved) {
-        btn.textContent = '✓ Saved to "' + activePlaylist + '"';
+        btn.textContent = '✓ Auto-saved  ·  ' + activePlaylist;
         btn.classList.add('is-saved');
         if (clearBtn) clearBtn.style.display = '';
     } else {
