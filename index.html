@@ -2040,6 +2040,24 @@ function preRollStart(inTime) {
 
 let audioCtx = null;
 
+// Fetch a URL as an ArrayBuffer. Uses XHR so it works on file:// as well as https://.
+function fetchArrayBuffer(url) {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', url, true);
+        xhr.responseType = 'arraybuffer';
+        xhr.onload = () => {
+            if (xhr.status === 200 || xhr.status === 0) {
+                resolve(xhr.response);
+            } else {
+                reject(new Error('HTTP ' + xhr.status + ': ' + url));
+            }
+        };
+        xhr.onerror = () => reject(new Error('Failed to load: ' + url));
+        xhr.send();
+    });
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // AudioContext init — no worklet needed
 // ══════════════════════════════════════════════════════════════════════════════
@@ -2235,29 +2253,19 @@ async function selectSong(name) {
         await initAudioContext();
 
         if (isCueSong) {
-            const resp = await fetch(library[name].src);
-            if (!resp.ok) throw new Error('Could not load cue: ' + resp.status);
-            instrBuffer = await audioCtx.decodeAudioData(await resp.arrayBuffer());
+            instrBuffer = await audioCtx.decodeAudioData(await fetchArrayBuffer(library[name].src));
             vocalBuffer = null;
         } else if (hasVocal) {
-            const [instrResp, vocalResp] = await Promise.all([
-                fetch(library[name].instr),
-                fetch(library[name].vocal)
-            ]);
-            if (!instrResp.ok) throw new Error('Could not load instrumental: ' + instrResp.status);
-            if (!vocalResp.ok)  throw new Error('Could not load vocal: '        + vocalResp.status);
             const [instrArr, vocalArr] = await Promise.all([
-                instrResp.arrayBuffer(),
-                vocalResp.arrayBuffer()
+                fetchArrayBuffer(library[name].instr),
+                fetchArrayBuffer(library[name].vocal)
             ]);
             [instrBuffer, vocalBuffer] = await Promise.all([
                 audioCtx.decodeAudioData(instrArr),
                 audioCtx.decodeAudioData(vocalArr)
             ]);
         } else {
-            const instrResp = await fetch(library[name].instr);
-            if (!instrResp.ok) throw new Error('Could not load instrumental: ' + instrResp.status);
-            instrBuffer = await audioCtx.decodeAudioData(await instrResp.arrayBuffer());
+            instrBuffer = await audioCtx.decodeAudioData(await fetchArrayBuffer(library[name].instr));
             vocalBuffer = null;
         }
 
@@ -2276,11 +2284,7 @@ async function selectSong(name) {
             const urlList = [v.instr, pv.instr,
                 ...(vampHasV ? [v.vocal]  : []),
                 ...(postHasV ? [pv.vocal] : [])];
-            const resps = await Promise.all(urlList.map(u => fetch(u)));
-            resps.forEach((r, i) => {
-                if (!r.ok) throw new Error('Could not load vamp audio: ' + urlList[i]);
-            });
-            const arrs    = await Promise.all(resps.map(r => r.arrayBuffer()));
+            const arrs    = await Promise.all(urlList.map(u => fetchArrayBuffer(u)));
             const decoded = await Promise.all(arrs.map(a => audioCtx.decodeAudioData(a)));
             vampInstrBuf    = decoded[0];
             postVampInstrBuf = decoded[1];
