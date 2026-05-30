@@ -2972,10 +2972,21 @@ function setVocalPreset(level) {
     autoSaveCurrentSongSettings();
 }
 
-// Emergency vocal nudge — keyboard shortcut for live performance.
+// Emergency vocal nudge — keyboard shortcut for live performance only.
 // -/_ drops vocal 30%; =/+ raises it 30%. Works mid-vamp.
+// Intentionally does NOT auto-save — this is a panic button, not a settings change.
+// Use the slider to permanently set vocal levels.
 function nudgeVocalLevel(delta) {
-    setVocalPreset(Math.max(0, Math.min(100, vocalLevel + delta)));
+    vocalLevel = Math.max(0, Math.min(100, vocalLevel + delta));
+    const s = document.getElementById('vocalSlider');
+    const v = document.getElementById('vocalValue');
+    if (s) s.value = vocalLevel;
+    if (v) v.textContent = vocalLevel + '%';
+    if (vocalGainNode) vocalGainNode.gain.value = vocalLevel / 100;
+    updateVocalFill();
+    updatePresetButtons();
+    updateSettingsIndicator();
+    // no autoSaveCurrentSongSettings() — deliberate
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
