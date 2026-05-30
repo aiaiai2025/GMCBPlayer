@@ -2204,7 +2204,9 @@ async function selectSong(name) {
         sessionMemory[sessionKey(activePlaylist, currentSong)] = {
             tempo: Math.round(tempoRatio * 100),
             pitch: pitchSemitones,
-            vocal: vocalLevel
+            vocal: vocalLevel,
+            regionIn:  regionInFrac,
+            regionOut: regionOutFrac,
         };
     }
     stopNodes();
@@ -3505,6 +3507,8 @@ function syncSlidersToCurrentSettings() {
     updatePresetButtons();
     updateSettingsIndicator();
     updateSaveSettingsBtn();
+    updateRegionBar();
+    updateRegionDisplay();
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -3771,22 +3775,28 @@ function applySongSettings(songName) {
     vocalLevel     = 100;
     lastProcessedTempo = null;
     lastProcessedPitch = null;
+    regionInFrac   = 0;
+    regionOutFrac  = 1;
 
     // 2. Saved playlist settings take priority — apply and stop if found
     if (activePlaylist !== 'all' && hasSavedSettings(activePlaylist, songName)) {
         const s = playlistSettings[activePlaylist][songName];
-        if (s.tempo !== undefined) tempoRatio     = s.tempo / 100;
-        if (s.pitch !== undefined) pitchSemitones = s.pitch;
-        if (s.vocal !== undefined) vocalLevel     = s.vocal;
+        if (s.tempo     !== undefined) tempoRatio     = s.tempo / 100;
+        if (s.pitch     !== undefined) pitchSemitones = s.pitch;
+        if (s.vocal     !== undefined) vocalLevel     = s.vocal;
+        if (s.regionIn  !== undefined) regionInFrac   = s.regionIn;
+        if (s.regionOut !== undefined) regionOutFrac  = s.regionOut;
         return;  // saved settings win — don't apply session memory on top
     }
 
     // 3. Fall back to per-playlist session memory (unsaved in-session changes)
     const mem = sessionMemory[sessionKey(activePlaylist, songName)];
     if (mem) {
-        if (mem.tempo !== undefined) tempoRatio     = mem.tempo / 100;
-        if (mem.pitch !== undefined) pitchSemitones = mem.pitch;
-        if (mem.vocal !== undefined) vocalLevel     = mem.vocal;
+        if (mem.tempo     !== undefined) tempoRatio     = mem.tempo / 100;
+        if (mem.pitch     !== undefined) pitchSemitones = mem.pitch;
+        if (mem.vocal     !== undefined) vocalLevel     = mem.vocal;
+        if (mem.regionIn  !== undefined) regionInFrac   = mem.regionIn;
+        if (mem.regionOut !== undefined) regionOutFrac  = mem.regionOut;
     }
 }
 
@@ -3794,9 +3804,11 @@ function saveCurrentSongSettings() {
     if (activePlaylist === 'all' || !currentSong) return;
     playlistSettings[activePlaylist]             = playlistSettings[activePlaylist] || {};
     playlistSettings[activePlaylist][currentSong] = {
-        tempo: Math.round(tempoRatio * 100),
-        pitch: pitchSemitones,
-        vocal: vocalLevel,
+        tempo:     Math.round(tempoRatio * 100),
+        pitch:     pitchSemitones,
+        vocal:     vocalLevel,
+        regionIn:  regionInFrac,
+        regionOut: regionOutFrac,
     };
     savePlaylistSettings();
     updateSaveSettingsBtn();
@@ -3891,9 +3903,11 @@ function onPlaylistSelect(value) {
     // Snapshot current settings into session memory for the OLD playlist context
     if (currentSong) {
         sessionMemory[sessionKey(activePlaylist, currentSong)] = {
-            tempo: Math.round(tempoRatio * 100),
-            pitch: pitchSemitones,
-            vocal: vocalLevel,
+            tempo:     Math.round(tempoRatio * 100),
+            pitch:     pitchSemitones,
+            vocal:     vocalLevel,
+            regionIn:  regionInFrac,
+            regionOut: regionOutFrac,
         };
     }
     activePlaylist = value;
