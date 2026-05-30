@@ -14,7 +14,7 @@
 //   Bump CACHE_VERSION below (v1 → v2) and re-upload sw.js.
 //   All users will re-download everything on their next visit with internet.
 // ══════════════════════════════════════════════════════════════════════════════
-const CACHE_VERSION = 'v27';
+const CACHE_VERSION = 'v28';
 const CACHE_NAME    = 'stem-player-' + CACHE_VERSION;
 
 const AUDIO_EXT = /\.(mp3|wav|m4a|aiff|ogg|flac)(\?.*)?$/i;

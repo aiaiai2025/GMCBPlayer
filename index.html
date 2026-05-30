@@ -2104,6 +2104,7 @@ async function loadManifest() {
         const showTitle = !Array.isArray(data) && data.showTitle ? data.showTitle : null;
 
         if (showTitle && titleEl) titleEl.textContent = showTitle;
+        if (showTitle) document.title = showTitle;
 
         let cueCount = 0;
         libraryOrder = [];
@@ -3975,6 +3976,9 @@ function confirmSavePlaylist() {
     const sel = document.getElementById('playlistSelect');
     if (sel) { sel.value = name; }
     activePlaylist = name;   // must be set AFTER renderPlaylistBar() resets it
+    const isPlaylist = name !== 'all';
+    document.getElementById('editPlaylistBtn')?.classList.toggle('hidden', !isPlaylist);
+    document.getElementById('deletePlaylistBtn')?.classList.toggle('hidden', !isPlaylist);
     renderSongList();
 }
 
