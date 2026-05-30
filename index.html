@@ -2239,6 +2239,12 @@ async function selectSong(name) {
     stopNodes();
     isPlaying = false;
     startOffset = 0;
+    // Clear stale audio buffers immediately so spacebar / show-ready glow cannot
+    // fire against the previous song's audio while the new song is loading.
+    instrBuffer = null;
+    vocalBuffer = null;
+    instrReady  = null;
+    vocalReady  = null;
     currentSong = name;
     isCueSong  = library[name].type === 'cue';
     hasVocal   = !isCueSong && !!(library[name].vocal);   // must be set before renderPlayer()
