@@ -1993,7 +1993,9 @@ let cueLoopActive = false;  // cue loop off by default; board op enables if need
 
 // ── Per-playlist saved settings ───────────────────────────────────────────────
 let playlistSettings = {};
-const PLAYLIST_SETTINGS_KEY = 'stemplayer_playlist_settings';
+const _storageNS = (window.location.origin + window.location.pathname)
+    .replace(/\/index\.html$/i, '').replace(/\/$/, '').split('/').pop() || 'default';
+const PLAYLIST_SETTINGS_KEY = 'stemplayer_playlist_settings_' + _storageNS;
 
 // ── Session memory: remembers last-used settings per song within this session ─
 // Not persisted — cleared on page reload. Allows switching songs and returning
@@ -3867,7 +3869,7 @@ let activePlaylist     = 'all';
 let isEditingPlaylist  = false;
 let editingPlaylistName = null;   // null = new playlist, string = editing existing
 
-const PLAYLISTS_KEY = 'stemplayer_playlists';
+const PLAYLISTS_KEY = 'stemplayer_playlists_' + _storageNS;
 
 function loadPlaylists() {
     try {
