@@ -2972,6 +2972,12 @@ function setVocalPreset(level) {
     autoSaveCurrentSongSettings();
 }
 
+// Emergency vocal nudge — keyboard shortcut for live performance.
+// -/_ drops vocal 30%; =/+ raises it 30%. Works mid-vamp.
+function nudgeVocalLevel(delta) {
+    setVocalPreset(Math.max(0, Math.min(100, vocalLevel + delta)));
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // Tempo
 // ══════════════════════════════════════════════════════════════════════════════
@@ -3774,6 +3780,9 @@ document.addEventListener('keydown', e => {
     if (!currentSong || !instrBuffer) return;
     if (e.target.tagName === 'INPUT') return;
     if (e.key === 'Escape') { stopAndRewind(); return; }
+    // Vocal nudge works even during a vamp loop — emergency rescue if a singer gets lost
+    if (e.key === '-' || e.key === '_') { e.preventDefault(); nudgeVocalLevel(-30); return; }
+    if (e.key === '=' || e.key === '+') { e.preventDefault(); nudgeVocalLevel(+30); return; }
     if (vampPhase === 'vamp') return;   // no play/seek shortcuts during vamp loop
     if (e.key === ' ') { e.preventDefault(); togglePlay(); }
     else if (e.key === 'ArrowLeft'  && !isVampSong) { e.preventDefault(); seekToFraction(Math.max(0, (getCurrentOriginalTime()-5)/instrBuffer.duration)); }
