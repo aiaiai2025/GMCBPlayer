@@ -2864,7 +2864,13 @@ function getCurrentOriginalTime() {
 function onScrubInput(e) {
     const frac = parseFloat(e.target.value) / 1000;
     const cur  = document.getElementById('timeCurrent');
-    if (cur && instrBuffer) cur.textContent = formatTime(frac * instrBuffer.duration);
+    if (cur) {
+        let dur = 0;
+        if      (vampPhase === 'vamp' && vampDuration)         dur = vampDuration;
+        else if (vampPhase === 'pt2'  && postVampInstrBuf)     dur = postVampInstrBuf.duration;
+        else if (instrBuffer)                                   dur = instrBuffer.duration;
+        if (dur) cur.textContent = formatTime(frac * dur);
+    }
     updateScrubFill();
 }
 
@@ -2874,6 +2880,7 @@ function onScrubRelease(e) {
 }
 
 async function seekToFraction(frac) {
+    if (isVampSong) { await seekVampToFraction(frac); return; }
     if (!instrBuffer) return;
     const wasPlaying = isPlaying;
     stopNodes();
@@ -2883,6 +2890,89 @@ async function seekToFraction(frac) {
         await startPlayback();
     } else {
         updateProgressUI(frac);
+    }
+}
+
+async function seekVampToFraction(frac) {
+    if (vampPhase === 'pt1') {
+        if (!instrBuffer) return;
+        const wasPlaying = isPlaying;
+        stopNodes();
+        isPlaying = false;
+        startOffset = frac * instrBuffer.duration;
+        if (wasPlaying) {
+            await startVampSongPlayback();
+        } else {
+            updateProgressUI(frac);
+        }
+
+    } else if (vampPhase === 'vamp') {
+        if (!vampInstrBuf || !isPlaying) return;
+        const offset = frac * vampDuration;
+        const now    = audioCtx.currentTime;
+        // Stop current loop nodes (don't use stopNodes — that would cancel animFrame)
+        if (vampInstrNode) { vampInstrNode.onended = null; try { vampInstrNode.stop(); } catch(e) {} try { vampInstrNode.disconnect(); } catch(e) {} vampInstrNode = null; }
+        if (vampVocalNode) { vampVocalNode.onended = null; try { vampVocalNode.stop(); } catch(e) {} try { vampVocalNode.disconnect(); } catch(e) {} vampVocalNode = null; }
+        // Recreate loop nodes from new offset
+        vampInstrNode = audioCtx.createBufferSource();
+        vampInstrNode.buffer = vampInstrBuf;
+        vampInstrNode.loop   = true;
+        vampInstrGain = audioCtx.createGain();
+        vampInstrGain.gain.value = 1;
+        vampInstrNode.connect(vampInstrGain);
+        vampInstrGain.connect(masterFadeNode);
+        if (hasVocal && vampVocalBuf) {
+            vampVocalNode = audioCtx.createBufferSource();
+            vampVocalNode.buffer = vampVocalBuf;
+            vampVocalNode.loop   = true;
+            vampVocalGain = audioCtx.createGain();
+            vampVocalGain.gain.value = 1;
+            vampVocalNode.connect(vampVocalGain);
+            vampVocalGain.connect(vocalGainNode);
+        }
+        vampInstrNode.start(now, offset);
+        if (vampVocalNode) vampVocalNode.start(now, offset);
+        vampLoopStartedAt = now - offset;   // keeps progress ticker correct
+        postVampQueued = false;
+        updateVampPanel();
+
+    } else if (vampPhase === 'pt2') {
+        if (!postVampInstrBuf) return;
+        const wasPlaying = isPlaying;
+        const offset = frac * postVampInstrBuf.duration;
+        if (instrNode) { instrNode.onended = null; try { instrNode.stop(); } catch(e) {} try { instrNode.disconnect(); } catch(e) {} instrNode = null; }
+        if (vocalNode) { vocalNode.onended = null; try { vocalNode.stop(); } catch(e) {} try { vocalNode.disconnect(); } catch(e) {} vocalNode = null; }
+        isPlaying = false;
+        startOffset = offset;
+        if (wasPlaying) {
+            // Restart PT3 from new offset
+            const pt3InstrSrc  = audioCtx.createBufferSource();
+            pt3InstrSrc.buffer = postVampInstrBuf;
+            const pt3InstrGain = audioCtx.createGain();
+            pt3InstrGain.gain.setValueAtTime(1, audioCtx.currentTime);
+            pt3InstrSrc.connect(pt3InstrGain);
+            pt3InstrGain.connect(masterFadeNode);
+            pt3InstrSrc.start(0, offset);
+            pt3InstrSrc.onended = onPart3Ended;
+            instrNode = pt3InstrSrc;
+            if (hasVocal && postVampVocalBuf) {
+                const pt3VocalSrc  = audioCtx.createBufferSource();
+                pt3VocalSrc.buffer = postVampVocalBuf;
+                const pt3VocalGain = audioCtx.createGain();
+                pt3VocalGain.gain.setValueAtTime(1, audioCtx.currentTime);
+                pt3VocalSrc.connect(pt3VocalGain);
+                pt3VocalGain.connect(vocalGainNode);
+                pt3VocalSrc.start(0, offset);
+                vocalNode = pt3VocalSrc;
+            }
+            startCtxTime = audioCtx.currentTime;
+            isPlaying = true;
+        } else {
+            const scrub = document.getElementById('scrubBar');
+            const cur   = document.getElementById('timeCurrent');
+            if (scrub) { scrub.value = frac * 1000; updateScrubFill(); }
+            if (cur)   cur.textContent = formatTime(offset);
+        }
     }
 }
 
@@ -3279,7 +3369,7 @@ function renderPlayer() {
             <div class="thermometer-label" id="thermometerLabel">—</div>
         </div>
 
-        <div class="scrub-section${isVampSong ? ' vamp-readonly' : ''}">
+        <div class="scrub-section">
             <div class="time-row">
                 <span id="timeCurrent">0:00</span>
                 <span id="timeTotal">—:——</span>
@@ -3796,8 +3886,24 @@ document.addEventListener('keydown', e => {
     if (e.key === '=' || e.key === '+') { e.preventDefault(); nudgeVocalLevel(+30); return; }
     if (vampPhase === 'vamp') return;   // no play/seek shortcuts during vamp loop
     if (e.key === ' ') { e.preventDefault(); togglePlay(); }
-    else if (e.key === 'ArrowLeft'  && !isVampSong) { e.preventDefault(); seekToFraction(Math.max(0, (getCurrentOriginalTime()-5)/instrBuffer.duration)); }
-    else if (e.key === 'ArrowRight' && !isVampSong) { e.preventDefault(); seekToFraction(Math.min(1, (getCurrentOriginalTime()+5)/instrBuffer.duration)); }
+    else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        if (vampPhase === 'pt2' && postVampInstrBuf) {
+            const t = startOffset + (audioCtx.currentTime - startCtxTime);
+            seekToFraction(Math.max(0, (t - 5) / postVampInstrBuf.duration));
+        } else if (instrBuffer) {
+            seekToFraction(Math.max(0, (getCurrentOriginalTime() - 5) / instrBuffer.duration));
+        }
+    }
+    else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        if (vampPhase === 'pt2' && postVampInstrBuf) {
+            const t = startOffset + (audioCtx.currentTime - startCtxTime);
+            seekToFraction(Math.min(1, (t + 5) / postVampInstrBuf.duration));
+        } else if (instrBuffer) {
+            seekToFraction(Math.min(1, (getCurrentOriginalTime() + 5) / instrBuffer.duration));
+        }
+    }
     else if (e.key === 'n' || e.key === 'N') { e.preventDefault(); goNextSong(); }
     else if (e.key === 'b' || e.key === 'B') { e.preventDefault(); goPrevSong(); }
     else if (e.key === 'r' || e.key === 'R') { e.preventDefault(); seekToFraction(0); }
