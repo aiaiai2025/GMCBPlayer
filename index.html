@@ -2810,7 +2810,7 @@ function tickVampProgress() {
             if (cur)   cur.textContent = formatTime(elapsed);
 
         } else if (vampPhase === 'pt2' && postVampInstrBuf) {
-            const t    = audioCtx.currentTime - startCtxTime;
+            const t    = startOffset + (audioCtx.currentTime - startCtxTime);
             const frac = Math.min(1, t / postVampInstrBuf.duration);
             const scrub = document.getElementById('scrubBar');
             const cur   = document.getElementById('timeCurrent');
@@ -2940,9 +2940,9 @@ async function seekVampToFraction(frac) {
         if (!postVampInstrBuf) return;
         const wasPlaying = isPlaying;
         const offset = frac * postVampInstrBuf.duration;
+        cancelAnimationFrame(animFrame);
         if (instrNode) { instrNode.onended = null; try { instrNode.stop(); } catch(e) {} try { instrNode.disconnect(); } catch(e) {} instrNode = null; }
         if (vocalNode) { vocalNode.onended = null; try { vocalNode.stop(); } catch(e) {} try { vocalNode.disconnect(); } catch(e) {} vocalNode = null; }
-        isPlaying = false;
         startOffset = offset;
         if (wasPlaying) {
             // Restart PT3 from new offset
@@ -2967,6 +2967,7 @@ async function seekVampToFraction(frac) {
             }
             startCtxTime = audioCtx.currentTime;
             isPlaying = true;
+            tickVampProgress();
         } else {
             const scrub = document.getElementById('scrubBar');
             const cur   = document.getElementById('timeCurrent');
