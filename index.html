@@ -38,11 +38,11 @@
             font-size: 13px;
             font-weight: 600;
             letter-spacing: 3px;
-            color: #888;
+            color: #bbb;
         }
         header .version {
             font-size: 11px;
-            color: #444;
+            color: #777;
             letter-spacing: 1px;
         }
 
@@ -89,7 +89,7 @@
 
         .load-hint {
             font-size: 11px;
-            color: #555;
+            color: #888;
             text-align: center;
             line-height: 1.4;
         }
@@ -145,7 +145,7 @@
         }
 
         .idle-message {
-            color: #444;
+            color: #777;
             font-size: 15px;
             text-align: center;
             line-height: 1.8;
@@ -154,7 +154,7 @@
         /* Status overlay */
         .status-bar {
             font-size: 12px;
-            color: #888;
+            color: #aaa;
             letter-spacing: 1px;
             height: 16px;
             text-align: center;
@@ -179,7 +179,7 @@
             display: flex;
             justify-content: space-between;
             font-size: 11px;
-            color: #555;
+            color: #999;
             margin-bottom: 9px;
             font-variant-numeric: tabular-nums;
             letter-spacing: 0.5px;
@@ -190,7 +190,7 @@
             width: 100%;
             height: 5px;
             border-radius: 3px;
-            background: #333;
+            background: #484848;
             outline: none;
             cursor: pointer;
         }
@@ -219,8 +219,8 @@
             height: 38px;
             border-radius: 50%;
             background: #2c2c2e;
-            border: 1px solid #3a3a3c;
-            color: #aaa;
+            border: 1px solid #666;
+            color: #ddd;
             font-size: 13px;
             cursor: pointer;
             display: flex;
@@ -235,8 +235,8 @@
             height: 38px;
             border-radius: 50%;
             background: #2c2c2e;
-            border: 1px solid #3a3a3c;
-            color: #aaa;
+            border: 1px solid #666;
+            color: #ddd;
             font-size: 14px;
             cursor: pointer;
             display: flex;
@@ -252,8 +252,8 @@
             height: 38px;
             border-radius: 50%;
             background: #2c2c2e;
-            border: 1px solid #3a3a3c;
-            color: #aaa;
+            border: 1px solid #666;
+            color: #ddd;
             font-size: 14px;
             cursor: pointer;
             display: flex;
@@ -288,8 +288,8 @@
             height: 38px;
             border-radius: 50%;
             background: #2c2c2e;
-            border: 1px solid #3a3a3c;
-            color: #555;
+            border: 1px solid #666;
+            color: #aaa;
             font-size: 17px;
             cursor: pointer;
             display: flex;
@@ -297,7 +297,7 @@
             justify-content: center;
             transition: background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
         }
-        .btn-loop:hover { background: #3a3a3c; color: #aaa; }
+        .btn-loop:hover { background: #3a3a3c; color: #ddd; }
         .btn-loop.loop-active {
             background: #0d2a1a;
             border-color: #34d399;
@@ -328,7 +328,7 @@
             font-size: 10px;
             letter-spacing: 2.5px;
             text-transform: uppercase;
-            color: #555;
+            color: #999;
         }
 
         .slider-row {
@@ -339,7 +339,7 @@
         }
         .slider-end-label {
             font-size: 10px;
-            color: #444;
+            color: #888;
             letter-spacing: 1px;
             text-transform: uppercase;
             flex-shrink: 0;
@@ -358,7 +358,7 @@
 
         .control-value {
             font-size: 12px;
-            color: #888;
+            color: #ccc;
             width: 38px;
             text-align: right;
             font-variant-numeric: tabular-nums;
@@ -375,14 +375,14 @@
         .preset-btn {
             padding: 4px 9px;
             border-radius: 12px;
-            border: 1px solid #333;
+            border: 1px solid #555;
             background: transparent;
-            color: #666;
+            color: #aaa;
             font-size: 10px;
             cursor: pointer;
             transition: all 0.15s;
         }
-        .preset-btn:hover { border-color: #555; color: #aaa; }
+        .preset-btn:hover { border-color: #888; color: #ddd; }
         .preset-btn.active-preset-vocal  { border-color: #e0932a; color: #e0932a; }
         .preset-btn.active-preset-tempo  { border-color: #4ecdc4; color: #4ecdc4; }
         .preset-btn.active-preset-pitch  { border-color: #a78bfa; color: #a78bfa; }
@@ -399,7 +399,7 @@
         /* Divider between control sections */
         .controls-divider {
             width: 1px;
-            background: #2c2c2e;
+            background: #3a3a3c;
             align-self: stretch;
             margin-top: 18px;
         }
@@ -456,32 +456,32 @@
         }
         .region-time-in  { font-size: 10px; font-variant-numeric: tabular-nums; color: #34d399; flex-shrink: 0; }
         .region-time-out { font-size: 10px; font-variant-numeric: tabular-nums; color: #f87171; flex-shrink: 0; }
-        .region-time-in.dim  { color: #444; }
-        .region-time-out.dim { color: #444; }
+        .region-time-in.dim  { color: #666; }
+        .region-time-out.dim { color: #666; }
 
         .region-label {
-            color: #444;
+            color: #777;
             font-size: 9px;
             letter-spacing: 2px;
             text-transform: uppercase;
             flex: 1;
             text-align: center;
         }
-        .region-label.active { color: #777; }
+        .region-label.active { color: #aaa; }
 
         .region-clear-btn {
             padding: 3px 9px;
             border-radius: 10px;
-            border: 1px solid #333;
+            border: 1px solid #555;
             background: transparent;
-            color: #555;
+            color: #999;
             font-size: 9px;
             cursor: pointer;
             letter-spacing: 0.5px;
             transition: all 0.15s;
             flex-shrink: 0;
         }
-        .region-clear-btn:hover { border-color: #666; color: #999; }
+        .region-clear-btn:hover { border-color: #888; color: #ccc; }
 
 
         /* ── Sidebar show title ── */
@@ -660,8 +660,8 @@
         .playlist-select {
             flex: 1;
             background: #222;
-            color: #aaa;
-            border: 1px solid #333;
+            color: #ccc;
+            border: 1px solid #555;
             border-radius: 5px;
             padding: 5px 6px;
             font-size: 12px;
@@ -669,14 +669,14 @@
             cursor: pointer;
             min-width: 0;
         }
-        .playlist-select:focus { border-color: #555; }
+        .playlist-select:focus { border-color: #888; }
         .playlist-icon-btn {
             width: 26px;
             height: 26px;
             background: none;
-            border: 1px solid #444;
+            border: 1px solid #666;
             border-radius: 5px;
-            color: #888;
+            color: #bbb;
             cursor: pointer;
             font-size: 12px;
             display: flex;
@@ -685,7 +685,7 @@
             flex-shrink: 0;
             transition: all 0.15s;
         }
-        .playlist-icon-btn:hover { border-color: #777; color: #ccc; }
+        .playlist-icon-btn:hover { border-color: #999; color: #fff; }
         #deletePlaylistBtn:hover { border-color: #cc3333; color: #ff5555; background: rgba(200,40,40,0.12); }
         .playlist-icon-btn.hidden { display: none; }
 
@@ -979,8 +979,8 @@
         .save-settings-btn {
             padding: 6px 14px;
             background: transparent;
-            border: 1px solid #2c2c2e;
-            color: #444;
+            border: 1px solid #555;
+            color: #999;
             border-radius: 6px;
             font-size: 11px;
             cursor: pointer;
@@ -990,15 +990,15 @@
             max-width: 340px;
             text-align: center;
         }
-        .save-settings-btn:hover { border-color: #555; color: #aaa; }
+        .save-settings-btn:hover { border-color: #888; color: #ccc; }
         /* Saved state: passive status badge — dim, no border, not attention-grabbing */
         .save-settings-btn.is-saved { border-color: transparent; color: #34d399; opacity: 0.45; cursor: default; }
         .save-settings-btn.is-saved:hover { border-color: transparent; color: #34d399; opacity: 0.45; }
         .clear-settings-btn {
             padding: 5px 9px;
             background: transparent;
-            border: 1px solid #2c2c2e;
-            color: #444;
+            border: 1px solid #555;
+            color: #999;
             border-radius: 5px;
             font-size: 10px;
             cursor: pointer;
