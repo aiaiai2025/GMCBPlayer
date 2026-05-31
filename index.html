@@ -901,7 +901,7 @@
             background: transparent;
             border: none;
             border-right: 1px solid #2c2c2e;
-            color: #444;
+            color: #aaa;
             font-size: 9px;
             letter-spacing: 1px;
             text-transform: uppercase;
@@ -909,7 +909,7 @@
             transition: all 0.15s;
         }
         .mode-pill:last-child { border-right: none; }
-        .mode-pill:hover:not(.active) { background: #1a1a1c; color: #888; }
+        .mode-pill:hover:not(.active) { background: #1a1a1c; color: #ddd; }
         /* Rehearsal — neutral */
         .mode-pill[data-mode="rehearsal"].active { background: #222; color: #aaa; }
         /* Show — blue */
@@ -1072,7 +1072,7 @@ window.SONGS_DATA = {"showTitle":"You’re a Good Man Charley Brown","songs":[{"
     <div class="mode-toggle-group" id="modeToggleGroup" title="Playback mode">
         <button class="mode-pill active" data-mode="rehearsal" onclick="setPlayMode('rehearsal')">Rehearsal</button>
         <button class="mode-pill"        data-mode="show"      onclick="setPlayMode('show')">Show</button>
-        <button class="mode-pill"        data-mode="auto"      onclick="setPlayMode('auto')">Auto</button>
+        <button class="mode-pill"        data-mode="auto"      onclick="setPlayMode('auto')" style="display:none">Auto</button>
         <button class="mode-pill"        data-mode="showcues"  onclick="setPlayMode('showcues')">Show W/Cues</button>
     </div>
     <span class="version">v2.19</span>
